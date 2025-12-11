@@ -1,0 +1,13 @@
+{
+  "version": "5",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1765482301262,
+      "tag": "0000_parched_texas_twister",
+      "breakpoints": true
+    }
+  ]
+}
