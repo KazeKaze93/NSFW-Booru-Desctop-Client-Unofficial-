@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "5",
-      "when": 1765482301262,
-      "tag": "0000_parched_texas_twister",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "5",
-      "when": 1765486057098,
-      "tag": "0001_bizarre_scarecrow",
+      "when": 1765489043343,
+      "tag": "0000_amusing_omega_sentinel",
       "breakpoints": true
     }
   ]
