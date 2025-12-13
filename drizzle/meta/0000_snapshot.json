@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "sqlite",
-  "id": "901dd134-d10d-4fe1-9a5c-c5cf23db786b",
+  "id": "39b9fa0e-77a3-49c0-aa90-34c2bb66ff4d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "artists": {
@@ -73,7 +73,15 @@
           "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "name_idx": {
+          "name": "name_idx",
+          "columns": [
+            "name"
+          ],
+          "isUnique": false
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
@@ -87,6 +95,13 @@
           "primaryKey": true,
           "notNull": true,
           "autoincrement": true
+        },
+        "post_id": {
+          "name": "post_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
         },
         "artist_id": {
           "name": "artist_id",
@@ -153,7 +168,37 @@
           "default": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "artist_id_idx": {
+          "name": "artist_id_idx",
+          "columns": [
+            "artist_id"
+          ],
+          "isUnique": false
+        },
+        "published_at_idx": {
+          "name": "published_at_idx",
+          "columns": [
+            "published_at"
+          ],
+          "isUnique": false
+        },
+        "is_viewed_idx": {
+          "name": "is_viewed_idx",
+          "columns": [
+            "is_viewed"
+          ],
+          "isUnique": false
+        },
+        "posts_artist_id_post_id_unique": {
+          "name": "posts_artist_id_post_id_unique",
+          "columns": [
+            "artist_id",
+            "post_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "posts_artist_id_artists_id_fk": {
           "name": "posts_artist_id_artists_id_fk",
