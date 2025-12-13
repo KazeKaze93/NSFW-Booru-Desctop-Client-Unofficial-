@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "sqlite",
-  "id": "cadbd33c-30f6-4413-a182-74f0db3cfbed",
+  "id": "5d478f1d-1521-4e42-b3f9-45c4b4104928",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "artists": {
@@ -33,8 +33,7 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "'tag'"
+          "autoincrement": false
         },
         "api_endpoint": {
           "name": "api_endpoint",
@@ -72,7 +71,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(unixepoch())"
+          "default": "unixepoch"
         }
       },
       "indexes": {},
@@ -88,7 +87,7 @@
           "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": true
         },
         "artist_id": {
           "name": "artist_id",
@@ -108,6 +107,13 @@
           "name": "preview_url",
           "type": "text",
           "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
           "notNull": false,
           "autoincrement": false
         },
@@ -125,14 +131,6 @@
           "notNull": false,
           "autoincrement": false
         },
-        "title": {
-          "name": "title",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false,
-          "default": "''"
-        },
         "published_at": {
           "name": "published_at",
           "type": "integer",
@@ -146,7 +144,7 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "(unixepoch())"
+          "default": "unixepoch"
         },
         "is_viewed": {
           "name": "is_viewed",
@@ -184,71 +182,24 @@
           "type": "integer",
           "primaryKey": true,
           "notNull": true,
-          "autoincrement": false
+          "autoincrement": true
         },
-        "userId": {
-          "name": "userId",
+        "user_id": {
+          "name": "user_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         },
-        "apiKey": {
-          "name": "apiKey",
+        "api_key": {
+          "name": "api_key",
           "type": "text",
           "primaryKey": false,
-          "notNull": true,
+          "notNull": false,
           "autoincrement": false
         }
       },
       "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
-    },
-    "subscriptions": {
-      "name": "subscriptions",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "tag_string": {
-          "name": "tag_string",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "last_post_id": {
-          "name": "last_post_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "new_posts_count": {
-          "name": "new_posts_count",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        }
-      },
-      "indexes": {
-        "subscriptions_tag_string_unique": {
-          "name": "subscriptions_tag_string_unique",
-          "columns": [
-            "tag_string"
-          ],
-          "isUnique": true
-        }
-      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
