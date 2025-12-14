@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "sqlite",
-  "id": "bd83d3dd-5156-429c-a8d9-33e2e63aa674",
+  "id": "41cf5184-d5e4-4c5e-9eda-4f6f84bd9bc5",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "artists": {
@@ -70,11 +70,18 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "(cast(strftime('%s', 'now') as integer) * 1000)"
+          "autoincrement": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "artists_tag_unique": {
+          "name": "artists_tag_unique",
+          "columns": [
+            "tag"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
@@ -150,7 +157,7 @@
         },
         "published_at": {
           "name": "published_at",
-          "type": "text",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -160,8 +167,7 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false,
-          "default": "(cast(strftime('%s', 'now') as integer) * 1000)"
+          "autoincrement": false
         },
         "is_viewed": {
           "name": "is_viewed",
@@ -172,7 +178,37 @@
           "default": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "artistIdIdx": {
+          "name": "artistIdIdx",
+          "columns": [
+            "artist_id"
+          ],
+          "isUnique": false
+        },
+        "isViewedIdx": {
+          "name": "isViewedIdx",
+          "columns": [
+            "is_viewed"
+          ],
+          "isUnique": false
+        },
+        "publishedAtIdx": {
+          "name": "publishedAtIdx",
+          "columns": [
+            "published_at"
+          ],
+          "isUnique": false
+        },
+        "posts_artist_id_post_id_unique": {
+          "name": "posts_artist_id_post_id_unique",
+          "columns": [
+            "artist_id",
+            "post_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "posts_artist_id_artists_id_fk": {
           "name": "posts_artist_id_artists_id_fk",
