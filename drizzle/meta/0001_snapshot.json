@@ -1,8 +1,8 @@
 {
   "version": "5",
   "dialect": "sqlite",
-  "id": "bd83d3dd-5156-429c-a8d9-33e2e63aa674",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "c4063833-10df-4066-8387-4f8ba3460e19",
+  "prevId": "bd83d3dd-5156-429c-a8d9-33e2e63aa674",
   "tables": {
     "artists": {
       "name": "artists",
@@ -172,7 +172,16 @@
           "default": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "posts_artist_id_post_id_unique": {
+          "name": "posts_artist_id_post_id_unique",
+          "columns": [
+            "artist_id",
+            "post_id"
+          ],
+          "isUnique": true
+        }
+      },
       "foreignKeys": {
         "posts_artist_id_artists_id_fk": {
           "name": "posts_artist_id_artists_id_fk",
