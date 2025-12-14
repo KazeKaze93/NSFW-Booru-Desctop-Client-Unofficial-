@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "sqlite",
-  "id": "39b9fa0e-77a3-49c0-aa90-34c2bb66ff4d",
+  "id": "af25417e-2581-4436-9f7b-a7aa62964dda",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "artists": {
@@ -74,12 +74,12 @@
         }
       },
       "indexes": {
-        "name_idx": {
-          "name": "name_idx",
+        "artists_tag_unique": {
+          "name": "artists_tag_unique",
           "columns": [
-            "name"
+            "tag"
           ],
-          "isUnique": false
+          "isUnique": true
         }
       },
       "foreignKeys": {},
@@ -124,25 +124,35 @@
           "notNull": true,
           "autoincrement": false
         },
+        "sample_url": {
+          "name": "sample_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
         "title": {
           "name": "title",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "''"
         },
         "rating": {
           "name": "rating",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "''"
         },
         "tags": {
           "name": "tags",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "published_at": {
@@ -169,24 +179,24 @@
         }
       },
       "indexes": {
-        "artist_id_idx": {
-          "name": "artist_id_idx",
+        "artistIdIdx": {
+          "name": "artistIdIdx",
           "columns": [
             "artist_id"
           ],
           "isUnique": false
         },
-        "published_at_idx": {
-          "name": "published_at_idx",
+        "isViewedIdx": {
+          "name": "isViewedIdx",
           "columns": [
-            "published_at"
+            "is_viewed"
           ],
           "isUnique": false
         },
-        "is_viewed_idx": {
-          "name": "is_viewed_idx",
+        "publishedAtIdx": {
+          "name": "publishedAtIdx",
           "columns": [
-            "is_viewed"
+            "published_at"
           ],
           "isUnique": false
         },
@@ -232,14 +242,16 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "''"
         },
         "api_key": {
           "name": "api_key",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
-          "autoincrement": false
+          "autoincrement": false,
+          "default": "''"
         }
       },
       "indexes": {},
