@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "sqlite",
-  "id": "41cf5184-d5e4-4c5e-9eda-4f6f84bd9bc5",
+  "id": "af25417e-2581-4436-9f7b-a7aa62964dda",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "artists": {
@@ -159,7 +159,7 @@
           "name": "published_at",
           "type": "integer",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "autoincrement": false
         },
         "created_at": {
