@@ -37,7 +37,6 @@ const registerSyncAndMaintenanceHandlers = (
   // Sync All
   ipcMain.handle(IPC_CHANNELS.DB.SYNC_ALL, () => {
     logger.info("IPC: [DB.SYNC_ALL] Starting background sync...");
-    // Запускаем и не ждем (fire and forget), прогресс идет через ивенты
     syncService.syncAllArtists().catch((error) => {
       logger.error("IPC: Critical background sync error:", error);
       syncService.sendEvent(
@@ -80,7 +79,7 @@ const registerSyncAndMaintenanceHandlers = (
 
       logger.info(`IPC: Starting backup to ${backupPath}`);
 
-      await db.backup(backupPath); // Теперь TS не будет ругаться
+      await db.backup(backupPath);
 
       shell.showItemInFolder(backupPath);
       return { success: true, path: backupPath };
@@ -93,7 +92,7 @@ const registerSyncAndMaintenanceHandlers = (
     }
   });
 
-  // --- RESTORE (DIRECT) ---
+  // --- RESTORE & RESTART ---
   ipcMain.handle(IPC_CHANNELS.BACKUP.RESTORE, async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
       title: "Select backup file",
@@ -109,8 +108,25 @@ const registerSyncAndMaintenanceHandlers = (
     try {
       logger.info(`IPC: Restoring database from ${sourcePath}`);
 
+      try {
+        const currentDb = getRawDatabase();
+        if (currentDb && typeof currentDb.close === "function") {
+          currentDb.close();
+          logger.info("IPC: Database connection closed to allow overwrite.");
+        }
+      } catch (e) {
+        logger.warn(
+          "IPC: Could not close DB explicitly (might be already closed):",
+          e
+        );
+      }
+
       const dbPath = path.join(app.getPath("userData"), "metadata.db");
-      await fs.copyFile(sourcePath, dbPath); // Это может упасть, если файл залочен
+      await fs.copyFile(sourcePath, dbPath);
+
+      logger.info(
+        "IPC: Restore successful. Relaunching app to apply migrations..."
+      );
 
       app.relaunch();
       app.exit(0);
@@ -121,12 +137,13 @@ const registerSyncAndMaintenanceHandlers = (
       return {
         success: false,
         error:
-          "Cannot restore while app is running. Please replace metadata.db manually for now.",
+          error instanceof Error
+            ? error.message
+            : "Restore failed (File Locked?)",
       };
     }
   });
 };
-
 // --- Main Registration Function ---
 export const registerAllHandlers = (
   syncService: SyncService,

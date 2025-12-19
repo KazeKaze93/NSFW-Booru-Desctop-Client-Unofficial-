@@ -65,12 +65,9 @@ async function initializeAppAndWindow() {
   try {
     DB_PATH = path.join(app.getPath("userData"), "metadata.db");
 
-    // === 🔥 ИНИЦИАЛИЗАЦИЯ ТОЛЬКО ПРЯМОЙ БД ===
+    // === ИНИЦИАЛИЗАЦИЯ ТОЛЬКО ПРЯМОЙ БД ===
     initializeDatabase(DB_PATH);
     logger.info("✅ Main: Direct DB instance initialized.");
-
-    // SyncService больше не требует воркера
-    // syncService.setDbWorkerClient(...) — УДАЛЕНО
 
     mainWindow = new BrowserWindow({
       width: 1200,
@@ -105,10 +102,8 @@ async function initializeAppAndWindow() {
         mainWindow.show();
         updaterService.checkForUpdates();
 
-        // 🔥 УДАЛЕН АРГУМЕНТ dbWorkerClient
         registerAllHandlers(syncService, updaterService, mainWindow);
 
-        // Фоновое обслуживание через 3 сек (уже без воркера, можно добавить в DbService если нужно)
         setTimeout(() => {
           logger.info("Main: App Ready.");
         }, 3000);

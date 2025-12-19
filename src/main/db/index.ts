@@ -11,7 +11,7 @@ import { logger } from "../lib/logger";
 export type DbType = BetterSQLite3Database<typeof schema>;
 
 let db: DbType | null = null;
-let dbInstance: Database.Database | null = null; // "Сырой" инстанс
+let dbInstance: Database.Database | null = null;
 
 function getMigrationsPath(): string {
   const isDev = process.env.NODE_ENV === "development";
@@ -29,18 +29,15 @@ export function initializeDatabase(dbPath: string): DbType {
   }
 
   try {
-    // 1. Создаем raw connection
     dbInstance = new Database(dbPath, {
       verbose: process.env.NODE_ENV === "development" ? console.log : undefined,
     });
 
-    // 2. Оборачиваем в Drizzle
     db = drizzle(dbInstance, { schema });
 
     const migrationsPath = getMigrationsPath();
     logger.info(`Database: Migrations Path: ${migrationsPath}`);
 
-    // 3. Накатываем миграции
     migrate(db, { migrationsFolder: migrationsPath });
     logger.info("Database: Migrations applied successfully.");
 
@@ -51,7 +48,6 @@ export function initializeDatabase(dbPath: string): DbType {
   }
 }
 
-// Возвращает Drizzle-обертку (для обычных запросов)
 export function getDatabase(): DbType {
   if (!db) {
     throw new Error(
@@ -61,7 +57,6 @@ export function getDatabase(): DbType {
   return db;
 }
 
-// 🔥 НОВАЯ ФУНКЦИЯ: Возвращает raw better-sqlite3 (для backup/restore)
 export function getRawDatabase(): Database.Database {
   if (!dbInstance) {
     throw new Error(

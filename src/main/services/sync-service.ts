@@ -255,7 +255,7 @@ export class SyncService {
 
         if (postsToSave.length > 0) {
           await this.db.transaction(async (tx) => {
-            await tx.insert(posts).values(postsToSave).onConflictDoNothing(); // Игнорим дубликаты
+            await tx.insert(posts).values(postsToSave).onConflictDoNothing();
 
             await tx
               .update(artists)
