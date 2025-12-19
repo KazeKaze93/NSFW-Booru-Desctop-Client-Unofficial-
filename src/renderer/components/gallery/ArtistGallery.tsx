@@ -50,6 +50,18 @@ export const ArtistGallery: React.FC<ArtistGalleryProps> = ({
   const queryClient = useQueryClient();
   const openViewer = useViewerStore((state) => state.open);
 
+  const handleResetCache = async () => {
+    if (!confirm(t("artistGallery.resetConfirm"))) return;
+
+    try {
+      await window.api.resetPostCache(artist.id);
+
+      queryClient.invalidateQueries({ queryKey: ["posts", artist.id] });
+    } catch (error) {
+      console.error("Failed to reset cache:", error);
+    }
+  };
+
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery({
       queryKey: ["posts", artist.id],
@@ -128,7 +140,7 @@ export const ArtistGallery: React.FC<ArtistGalleryProps> = ({
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={handleResetCache}>
             <Wrench className="w-4 h-4 sm:mr-2" />
             <span className="hidden sm:inline">Edit</span>
           </Button>

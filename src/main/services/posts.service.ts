@@ -160,6 +160,16 @@ export class PostsService {
     return result.changes > 0;
   }
 
+  async resetArtistCache(artistId: number): Promise<boolean> {
+    const result = await this.db
+      .update(posts)
+      .set({ isViewed: false })
+      .where(eq(posts.artistId, artistId))
+      .run();
+
+    return result.changes > 0;
+  }
+
   async resetPostCache(postId: number): Promise<boolean> {
     return this.updatePost(postId, { isViewed: false });
   }

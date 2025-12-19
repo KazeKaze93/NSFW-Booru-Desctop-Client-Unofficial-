@@ -168,15 +168,27 @@ export const registerPostHandlers = (service: PostsService) => {
     }
   });
 
-  // 6. RESET CACHE
+  // // 6. RESET CACHE
+  // ipcMain.handle(
+  //   IPC_CHANNELS.DB.RESET_POST_CACHE,
+  //   async (_, payload: unknown) => {
+  //     const validation = PostIdSchema.safeParse(payload);
+  //     if (validation.success) {
+  //       logger.info(`[IPC] Reset cache requested for post ${validation.data}`);
+  //     }
+  //     return true;
+  //   }
+  // );
+
   ipcMain.handle(
     IPC_CHANNELS.DB.RESET_POST_CACHE,
-    async (_, payload: unknown) => {
-      const validation = PostIdSchema.safeParse(payload);
-      if (validation.success) {
-        logger.info(`[IPC] Reset cache requested for post ${validation.data}`);
+    async (_, artistId: number) => {
+      try {
+        return await service.resetArtistCache(artistId);
+      } catch (error) {
+        logger.error("IPC: Failed to reset post cache", error);
+        return false;
       }
-      return true;
     }
   );
 };
