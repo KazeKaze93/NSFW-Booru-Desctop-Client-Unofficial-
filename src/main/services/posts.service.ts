@@ -1,7 +1,7 @@
-import type { Post } from "../db/schema";
-import { posts } from "../db/schema";
-import type { DbType } from "../db";
 import { eq, count, desc } from "drizzle-orm";
+import { getDatabase } from "../db";
+import { posts } from "../db/schema";
+import type { Post } from "../db/schema";
 
 export type PostUpdateChanges = {
   rating?: string;
@@ -15,7 +15,9 @@ export type PostUpdateChanges = {
 };
 
 export class PostsService {
-  constructor(private db: DbType) {}
+  private get db() {
+    return getDatabase();
+  }
 
   async getByArtist(params: {
     artistId: number;
@@ -63,7 +65,6 @@ export class PostsService {
     postId: number,
     changes: PostUpdateChanges
   ): Promise<boolean> {
-    // Build update object - Drizzle handles boolean conversion automatically
     const updateData: Partial<typeof posts.$inferInsert> = {};
     if (changes.rating !== undefined) updateData.rating = changes.rating;
     if (changes.tags !== undefined) updateData.tags = changes.tags;
@@ -100,7 +101,6 @@ export class PostsService {
       throw new Error(`Post with id ${postId} not found`);
     }
 
-    // Drizzle handles boolean conversion automatically, so we can check directly
     const isCurrentlyFavorited = post.isFavorited ?? false;
     const newValue = !isCurrentlyFavorited;
 
@@ -118,7 +118,6 @@ export class PostsService {
       throw new Error(`Post with id ${postId} not found`);
     }
 
-    // Drizzle handles boolean conversion automatically, so we can check directly
     const isCurrentlyViewed = post.isViewed ?? false;
     const newValue = !isCurrentlyViewed;
 

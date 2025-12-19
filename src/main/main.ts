@@ -23,7 +23,7 @@ if (app.isPackaged) {
 import { promises as fs } from "fs";
 import { registerAllHandlers } from "./ipc/index";
 import { DbWorkerClient } from "./db/db-worker-client";
-import { initializeDatabase } from "./db";
+import { initializeDatabase } from "./db"; // <--- 1. ИМПОРТ
 import { logger } from "./lib/logger";
 import { updaterService } from "./services/updater-service";
 import { syncService } from "./services/sync-service";
@@ -124,16 +124,12 @@ async function initializeAppAndWindow() {
     logger.info(`Main: Migrations Path: ${MIGRATIONS_PATH}`);
 
     // === 1. АСИНХРОННАЯ ИНИЦИАЛИЗАЦИЯ DB WORKER ===
-    // Блокировка здесь безопасна, так как Electron уже готов.
     dbWorkerClient = await DbWorkerClient.initialize(DB_PATH, MIGRATIONS_PATH);
     logger.info("✅ Main: DB Worker Client initialized and ready.");
 
     // === 1.5. ИНИЦИАЛИЗАЦИЯ ПРЯМОГО DB ИНСТАНСА ===
-    const db = initializeDatabase(DB_PATH);
+    initializeDatabase(DB_PATH);
     logger.info("✅ Main: Direct DB instance initialized and ready.");
-
-    // === 2. Инициализация сервисов и создание окна ===
-    syncService.setDbWorkerClient(dbWorkerClient);
 
     mainWindow = new BrowserWindow({
       width: 1200,
@@ -150,7 +146,6 @@ async function initializeAppAndWindow() {
       },
     });
 
-    // Устанавливаем окно для синглтонов
     updaterService.setWindow(mainWindow);
     syncService.setWindow(mainWindow);
 
@@ -176,13 +171,7 @@ async function initializeAppAndWindow() {
         window.show();
         updaterService.checkForUpdates();
 
-        registerAllHandlers(
-          workerClient,
-          db,
-          syncService,
-          updaterService,
-          window
-        );
+        registerAllHandlers(workerClient, syncService, updaterService, window);
 
         setTimeout(() => {
           logger.info("Main: Starting deferred background DB maintenance...");

@@ -1,8 +1,9 @@
 import { ipcMain, safeStorage } from "electron";
-import { DbWorkerClient } from "../../db/db-worker-client";
 import { IPC_CHANNELS } from "../channels";
 import { z } from "zod";
 import { logger } from "../../lib/logger";
+import { SettingsService } from "../../services/settings.service";
+import type { Settings } from "../../db/schema";
 
 const SettingsPayloadSchema = z.object({
   userId: z.string().optional(),
@@ -11,17 +12,18 @@ const SettingsPayloadSchema = z.object({
   isAdultConfirmed: z.boolean().optional(),
 });
 
-interface SettingsResponse {
-  userId: string;
-  hasApiKey: boolean;
-  isSafeMode: boolean;
-  isAdultConfirmed: boolean;
-}
+export const registerSettingsHandlers = (service: SettingsService) => {
+  ipcMain.removeHandler(IPC_CHANNELS.SETTINGS.GET);
+  ipcMain.removeHandler(IPC_CHANNELS.SETTINGS.SAVE);
 
-export const registerSettingsHandlers = (db: DbWorkerClient) => {
   // GET Settings
   ipcMain.handle(IPC_CHANNELS.SETTINGS.GET, async () => {
-    return db.call<SettingsResponse>("getSettingsStatus");
+    try {
+      return await service.getSettingsStatus();
+    } catch (e) {
+      logger.error("IPC: Error getting settings:", e);
+      throw new Error("Failed to get settings");
+    }
   });
 
   // SAVE Settings
@@ -51,12 +53,16 @@ export const registerSettingsHandlers = (db: DbWorkerClient) => {
     }
 
     try {
-      const result = await db.call("saveSettings", {
-        userId,
-        encryptedApiKey,
-        isSafeMode,
-        isAdultConfirmed,
-      });
+      const updateData: Partial<Settings> = {};
+
+      if (userId !== undefined) updateData.userId = userId;
+      if (encryptedApiKey !== undefined)
+        updateData.encryptedApiKey = encryptedApiKey;
+      if (isSafeMode !== undefined) updateData.isSafeMode = isSafeMode;
+      if (isAdultConfirmed !== undefined)
+        updateData.isAdultConfirmed = isAdultConfirmed;
+
+      const result = await service.updateSettings(updateData);
 
       logger.info("IPC: Settings saved.");
       return result;

@@ -1,5 +1,3 @@
-// Cursor: select file:src/main/db/db-worker-client.ts
-
 /**
  * Database Worker Client
  * Manages communication with the DB Worker thread

@@ -1,8 +1,8 @@
 import { BrowserWindow, ipcMain, shell, dialog, clipboard } from "electron";
 import { DbWorkerClient } from "../db/db-worker-client";
-import type { DbType } from "../db";
 import { SyncService } from "../services/sync-service";
 import { UpdaterService } from "../services/updater-service";
+import { SettingsService } from "../services/settings.service";
 import { IPC_CHANNELS } from "./channels";
 import { logger } from "../lib/logger";
 import { z } from "zod";
@@ -95,7 +95,6 @@ const registerSyncAndMaintenanceHandlers = (
 // --- Main Registration Function ---
 export const registerAllHandlers = (
   dbWorkerClient: DbWorkerClient,
-  db: DbType,
   syncService: SyncService,
   _updaterService: UpdaterService,
   mainWindow: BrowserWindow
@@ -123,8 +122,9 @@ export const registerAllHandlers = (
   });
 
   // 1. Init Services
-  const postsService = new PostsService(db);
-  const artistsService = new ArtistsService(dbWorkerClient);
+  const artistsService = new ArtistsService();
+  const postsService = new PostsService();
+  const settingsService = new SettingsService();
 
   // 2. Register Domain Handlers
   registerPostHandlers(postsService);
@@ -132,13 +132,15 @@ export const registerAllHandlers = (
   registerViewerHandlers();
 
   // 3. Register Settings
-  registerSettingsHandlers(dbWorkerClient);
-
+  registerSettingsHandlers(settingsService);
   // 4. Register Sync and Maintenance
   registerSyncAndMaintenanceHandlers(dbWorkerClient, syncService, mainWindow);
 
   // 5. Register Files (Downloads)
   registerFileHandlers(postsService);
 
+  registerSettingsHandlers(settingsService);
+
+  syncService.setServices(settingsService, artistsService);
   logger.info("IPC: All modular handlers registered.");
 };

@@ -6,7 +6,6 @@ import {
 import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import * as schema from "./schema";
 import * as path from "path";
-import { app } from "electron";
 import { logger } from "../lib/logger";
 
 type DbType = BetterSQLite3Database<typeof schema>;
