@@ -2,6 +2,7 @@ import React, { forwardRef, useMemo } from "react";
 import {
   useInfiniteQuery,
   useQueryClient,
+  useQuery,
   useMutation,
   InfiniteData,
 } from "@tanstack/react-query";
@@ -42,25 +43,24 @@ const ItemContainer = forwardRef<
 ));
 ItemContainer.displayName = "ItemContainer";
 
+// ... (все импорты остаются)
+
 export const ArtistGallery: React.FC<ArtistGalleryProps> = ({
   artist,
   onBack,
 }) => {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+
+  // Zustand Store
   const openViewer = useViewerStore((state) => state.open);
+  const updateQueueIds = useViewerStore((state) => state.updateQueueIds);
+  const isOpen = useViewerStore((state) => state.isOpen);
 
-  const handleResetCache = async () => {
-    if (!confirm(t("artistGallery.resetConfirm"))) return;
-
-    try {
-      await window.api.resetPostCache(artist.id);
-
-      queryClient.invalidateQueries({ queryKey: ["posts", artist.id] });
-    } catch (error) {
-      console.error("Failed to reset cache:", error);
-    }
-  };
+  const { data: totalCount = 0 } = useQuery({
+    queryKey: ["posts-count", artist.id],
+    queryFn: () => window.api.getArtistPostsCount(artist.id),
+  });
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery({
@@ -81,6 +81,22 @@ export const ArtistGallery: React.FC<ArtistGalleryProps> = ({
     () => data?.pages.flatMap((page) => page) || [],
     [data]
   );
+
+  React.useEffect(() => {
+    if (isOpen && allPosts.length > 0) {
+      updateQueueIds(allPosts.map((p) => p.id));
+    }
+  }, [allPosts, isOpen, updateQueueIds]);
+
+  const handleResetCache = async () => {
+    if (!confirm(t("artistGallery.resetConfirm"))) return;
+    try {
+      await window.api.resetPostCache(artist.id);
+      queryClient.invalidateQueries({ queryKey: ["posts", artist.id] });
+    } catch (error) {
+      console.error("Failed to reset cache:", error);
+    }
+  };
 
   const viewMutation = useMutation({
     mutationFn: async (postId: number) => {
@@ -106,8 +122,14 @@ export const ArtistGallery: React.FC<ArtistGalleryProps> = ({
 
   const handlePostClick = (index: number) => {
     const post = allPosts[index];
-    if (post && !post.isViewed) {
+    if (!post) return;
+
+    if (!post.isViewed) {
       viewMutation.mutate(post.id);
+    }
+
+    if (hasNextPage && index > allPosts.length - 10) {
+      fetchNextPage();
     }
 
     openViewer({
@@ -115,6 +137,8 @@ export const ArtistGallery: React.FC<ArtistGalleryProps> = ({
       ids: allPosts.map((p) => p.id),
       initialIndex: index,
       listKey: `artist-${artist.id}`,
+      hasNextPage,
+      fetchNextPage,
     });
   };
 
@@ -135,7 +159,7 @@ export const ArtistGallery: React.FC<ArtistGalleryProps> = ({
           <div>
             <h2 className="text-xl font-bold tracking-tight">{artist.name}</h2>
             <p className="text-sm text-muted-foreground">
-              {allPosts.length} posts loaded
+              {totalCount} {t("artistGallery.totalPosts")}
             </p>
           </div>
         </div>

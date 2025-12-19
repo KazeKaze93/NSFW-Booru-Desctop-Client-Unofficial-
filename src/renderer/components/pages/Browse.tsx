@@ -58,13 +58,11 @@ export const Browse = () => {
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery({
-      queryKey: queryKey,
+      queryKey: ["browse-posts"],
       queryFn: async ({ pageParam = 1 }) => {
         return window.api.getArtistPosts({
           page: pageParam,
-          filters: {
-            tags: debouncedSearch || undefined,
-          },
+          artistId: undefined,
         });
       },
       getNextPageParam: (lastPage, allPages) => {

@@ -193,35 +193,6 @@ Button.displayName = "Button";
 export { Button };
 </file>
 
-<file path="src/renderer/components/ui/progress.tsx">
-import * as React from "react"
-import * as ProgressPrimitive from "@radix-ui/react-progress"
-
-import { cn } from "@/lib/utils"
-
-const Progress = React.forwardRef<
-  React.ElementRef<typeof ProgressPrimitive.Root>,
-  React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>
->(({ className, value, ...props }, ref) => (
-  <ProgressPrimitive.Root
-    ref={ref}
-    className={cn(
-      "relative h-2 w-full overflow-hidden rounded-full bg-primary/20",
-      className
-    )}
-    {...props}
-  >
-    <ProgressPrimitive.Indicator
-      className="h-full w-full flex-1 bg-primary transition-all"
-      style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
-    />
-  </ProgressPrimitive.Root>
-))
-Progress.displayName = ProgressPrimitive.Root.displayName
-
-export { Progress }
-</file>
-
 <file path=".ai/CONTEXT.md">
 # Project: RuleDesk
 
@@ -1467,150 +1438,6 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
 };
 </file>
 
-<file path="src/renderer/components/dialogs/UpdateNotification.tsx">
-import { useEffect, useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "../ui/dialog";
-import { Button } from "../ui/button";
-import { Progress } from "../ui/progress";
-import { useTranslation } from "react-i18next";
-import { Loader2, Download, RefreshCw } from "lucide-react";
-import type { UpdateStatusData } from "../../../renderer.d.ts";
-
-export const UpdateNotification = () => {
-  const { t } = useTranslation();
-  const [isOpen, setIsOpen] = useState(false);
-  const [status, setStatus] = useState<
-    "available" | "downloading" | "downloaded" | "error"
-  >("available");
-  const [progress, setProgress] = useState(0);
-  const [version, setVersion] = useState("");
-  const [isPortable, setIsPortable] = useState(false);
-
-  useEffect(() => {
-    const removeStatusListener = window.api.onUpdateStatus(
-      (data: UpdateStatusData) => {
-        console.log("Update status:", data);
-
-        if (data.status === "available") {
-          setVersion(data.version || "");
-          setIsPortable(!!data.isPortable);
-          setIsOpen(true);
-          setStatus("available");
-        } else if (data.status === "downloading") {
-          setStatus("downloading");
-        } else if (data.status === "downloaded") {
-          setStatus("downloaded");
-        } else if (data.status === "error") {
-          setStatus("error");
-          console.error("Update error:", data.message);
-        }
-      }
-    );
-
-    const removeProgressListener = window.api.onUpdateProgress(
-      (percent: number) => {
-        setProgress(percent);
-      }
-    );
-
-    return () => {
-      removeStatusListener();
-      removeProgressListener();
-    };
-  }, []);
-
-  const handleAction = () => {
-    if (status === "available") {
-      window.api.startDownload();
-      if (!isPortable) {
-        setStatus("downloading");
-      } else {
-        setIsOpen(false);
-      }
-    } else if (status === "downloaded") {
-      window.api.quitAndInstall();
-    }
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle className="flex gap-2 items-center">
-            <RefreshCw className="w-5 h-5 text-primary" />
-            {t("updates.newVersionTitle", "Update Available")}
-          </DialogTitle>
-          <DialogDescription>
-            {t(
-              "updates.newVersionDesc",
-              "A new version {{version}} is available.",
-              { version }
-            )}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="py-4">
-          {status === "downloading" && (
-            <div className="space-y-2">
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Downloading...</span>
-                <span>{Math.round(progress)}%</span>
-              </div>
-              <Progress value={progress} className="h-2" />
-            </div>
-          )}
-
-          {status === "downloaded" && (
-            <div className="p-3 text-sm text-green-500 rounded-md bg-green-500/10">
-              Update downloaded and ready to install.
-            </div>
-          )}
-
-          {status === "error" && (
-            <div className="p-3 text-sm text-red-500 rounded-md bg-red-500/10">
-              Failed to download update. Please try again later.
-            </div>
-          )}
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setIsOpen(false)}>
-            {t("common.cancel", "Cancel")}
-          </Button>
-
-          <Button onClick={handleAction} disabled={status === "downloading"}>
-            {status === "available" && (
-              <>
-                <Download className="mr-2 w-4 h-4" />
-                {isPortable
-                  ? "Open Download Page"
-                  : t("updates.download", "Download")}
-              </>
-            )}
-            {status === "downloading" && (
-              <>
-                <Loader2 className="mr-2 w-4 h-4 animate-spin" />
-                Downloading...
-              </>
-            )}
-            {status === "downloaded" &&
-              t("updates.restart", "Restart & Install")}
-            {status === "error" && "Retry"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-};
-</file>
-
 <file path="src/renderer/components/gallery/ArtistCard.tsx">
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -1846,205 +1673,6 @@ export const ArtistDetails = () => {
   return (
     <div className="flex flex-col h-full">
       <ArtistGallery artist={artist} onBack={() => navigate("/tracked")} />
-    </div>
-  );
-};
-</file>
-
-<file path="src/renderer/components/pages/Browse.tsx">
-import React, { useState, forwardRef, useMemo } from "react";
-import {
-  useInfiniteQuery,
-  useQueryClient,
-  useMutation,
-  InfiniteData,
-} from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
-import { VirtuosoGrid } from "react-virtuoso";
-import { Search, Loader2, FilterX } from "lucide-react";
-
-import { Input } from "../ui/input";
-import { PostCard } from "../gallery/PostCard";
-import { cn } from "../../lib/utils";
-import type { Post } from "../../../main/db/schema";
-import { useViewerStore } from "../../store/viewerStore";
-import { useDebounce } from "../../lib/hooks/useDebounce";
-
-// --- Grid Components (Virtuoso) ---
-
-const GridContainer = forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "grid grid-cols-2 gap-4 p-4 pb-32 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6",
-      className
-    )}
-    {...props}
-  />
-));
-GridContainer.displayName = "GridContainer";
-
-const ItemContainer = forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("w-full aspect-[2/3]", className)} {...props} />
-));
-ItemContainer.displayName = "ItemContainer";
-
-// --- Main Component ---
-
-export const Browse = () => {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const openViewer = useViewerStore((state) => state.open);
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const debouncedSearch = useDebounce(searchQuery, 500);
-
-  const queryKey = useMemo(
-    () => ["posts", "browse", { tags: debouncedSearch }],
-    [debouncedSearch]
-  );
-
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteQuery({
-      queryKey: queryKey,
-      queryFn: async ({ pageParam = 1 }) => {
-        return window.api.getArtistPosts({
-          page: pageParam,
-          filters: {
-            tags: debouncedSearch || undefined,
-          },
-        });
-      },
-      getNextPageParam: (lastPage, allPages) => {
-        return lastPage.length === 50 ? allPages.length + 1 : undefined;
-      },
-      initialPageParam: 1,
-    });
-
-  const allPosts = useMemo(
-    () => data?.pages.flatMap((page) => page) || [],
-    [data]
-  );
-
-  const viewMutation = useMutation({
-    mutationFn: async (postId: number) => {
-      await window.api.updatePost(postId, { isViewed: true });
-    },
-    onSuccess: (_, postId) => {
-      queryClient.setQueryData<InfiniteData<Post[]>>(queryKey, (oldData) => {
-        if (!oldData) return oldData;
-        return {
-          ...oldData,
-          pages: oldData.pages.map((page) =>
-            page.map((post) =>
-              post.id === postId ? { ...post, isViewed: true } : post
-            )
-          ),
-        };
-      });
-    },
-  });
-
-  const handlePostClick = (index: number) => {
-    const post = allPosts[index];
-    if (post && !post.isViewed) {
-      viewMutation.mutate(post.id);
-    }
-
-    openViewer({
-      origin: { kind: "browse", filters: debouncedSearch },
-      ids: allPosts.map((p) => p.id),
-      initialIndex: index,
-      listKey: `browse-${debouncedSearch}`,
-    });
-  };
-
-  const handleToggleFavorite = async (post: Post) => {
-    const newState = !post.isFavorited;
-    queryClient.setQueryData<InfiniteData<Post[]>>(queryKey, (oldData) => {
-      if (!oldData) return oldData;
-      return {
-        ...oldData,
-        pages: oldData.pages.map((page) =>
-          page.map((p) =>
-            p.id === post.id ? { ...p, isFavorited: newState } : p
-          )
-        ),
-      };
-    });
-    await window.api.updatePost(post.id, { isFavorited: newState });
-  };
-
-  return (
-    <div className="flex flex-col h-full bg-background">
-      <div className="flex z-10 items-center px-4 py-3 border-b backdrop-blur shrink-0 bg-background/50">
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={t(
-              "browse.searchPlaceholder",
-              "Filter tags in library..."
-            )}
-            className="pl-9 h-9"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <div className="ml-auto text-xs text-muted-foreground">
-          {allPosts.length} items
-        </div>
-      </div>
-
-      <div className="flex-1 min-h-0">
-        {isLoading ? (
-          <div className="flex justify-center items-center h-full text-muted-foreground">
-            <Loader2 className="w-8 h-8 animate-spin" />
-          </div>
-        ) : allPosts.length === 0 ? (
-          <div className="flex flex-col gap-2 justify-center items-center h-full text-muted-foreground">
-            <FilterX className="w-12 h-12 opacity-50" />
-            <p>No posts found</p>
-          </div>
-        ) : (
-          <VirtuosoGrid
-            style={{ height: "100%" }}
-            totalCount={allPosts.length}
-            endReached={() => {
-              if (hasNextPage && !isFetchingNextPage) {
-                fetchNextPage();
-              }
-            }}
-            components={{
-              List: GridContainer,
-              Item: ItemContainer,
-              Footer: () =>
-                isFetchingNextPage ? (
-                  <div className="flex col-span-full justify-center py-4 w-full">
-                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                  </div>
-                ) : null,
-            }}
-            itemContent={(index) => {
-              const post = allPosts[index];
-              if (!post) return null;
-
-              return (
-                <PostCard
-                  post={post}
-                  onClick={() => handlePostClick(index)}
-                  onToggleFavorite={() => handleToggleFavorite(post)}
-                />
-              );
-            }}
-          />
-        )}
-      </div>
     </div>
   );
 };
@@ -2787,6 +2415,35 @@ Label.displayName = LabelPrimitive.Root.displayName
 export { Label }
 </file>
 
+<file path="src/renderer/components/ui/progress.tsx">
+import * as React from "react"
+import * as ProgressPrimitive from "@radix-ui/react-progress"
+
+import { cn } from "@/lib/utils"
+
+const Progress = React.forwardRef<
+  React.ElementRef<typeof ProgressPrimitive.Root>,
+  React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root>
+>(({ className, value, ...props }, ref) => (
+  <ProgressPrimitive.Root
+    ref={ref}
+    className={cn(
+      "relative h-2 w-full overflow-hidden rounded-full bg-primary/20",
+      className
+    )}
+    {...props}
+  >
+    <ProgressPrimitive.Indicator
+      className="h-full w-full flex-1 bg-primary transition-all"
+      style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
+    />
+  </ProgressPrimitive.Root>
+))
+Progress.displayName = ProgressPrimitive.Root.displayName
+
+export { Progress }
+</file>
+
 <file path="src/renderer/components/ui/select.tsx">
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
@@ -3002,24 +2659,6 @@ i18n.use(initReactI18next).init({
 });
 
 export default i18n;
-</file>
-
-<file path="src/renderer/lib/hooks/useDebounce.ts">
-import { useEffect, useState } from "react";
-
-export function useDebounce<T>(value: T, delay?: number): T {
-  const [debouncedValue, setDebouncedValue] = useState<T>(value);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedValue(value), delay || 500);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [value, delay]);
-
-  return debouncedValue;
-}
 </file>
 
 <file path="src/renderer/lib/tag-utils.ts">
@@ -3844,116 +3483,341 @@ export class UpdaterService {
 export const updaterService = new UpdaterService();
 </file>
 
-<file path="src/renderer/components/gallery/PostCard.tsx">
-import React from "react";
-import { Play, Check, Heart } from "lucide-react";
-import { cn } from "../../lib/utils";
-import type { Post } from "../../../main/db/schema";
+<file path="src/renderer/components/dialogs/UpdateNotification.tsx">
+import { useEffect, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "../ui/dialog";
+import { Button } from "../ui/button";
+import { Progress } from "../ui/progress";
+import { useTranslation } from "react-i18next";
+import { Loader2, Download, RefreshCw } from "lucide-react";
+import type { UpdateStatusData } from "../../../main/bridge";
 
-interface PostCardProps {
-  post: Post;
-  onClick: () => void;
-  onToggleFavorite?: (post: Post) => void;
-}
+export const UpdateNotification = () => {
+  const { t } = useTranslation();
+  const [isOpen, setIsOpen] = useState(false);
+  const [status, setStatus] = useState<
+    "available" | "downloading" | "downloaded" | "error"
+  >("available");
+  const [progress, setProgress] = useState(0);
+  const [version, setVersion] = useState("");
+  const [isPortable, setIsPortable] = useState(false);
 
-const isVideo = (url: string) => url.endsWith(".mp4") || url.endsWith(".webm");
+  useEffect(() => {
+    const removeStatusListener = window.api.onUpdateStatus(
+      (data: UpdateStatusData) => {
+        console.log("Update status:", data);
 
-export const PostCard: React.FC<PostCardProps> = ({
-  post,
-  onClick,
-  onToggleFavorite,
-}) => {
-  const isVid = isVideo(post.fileUrl);
+        if (data.status === "available") {
+          setVersion(data.version || "");
+          setIsPortable(!!data.isPortable);
+          setIsOpen(true);
+          setStatus("available");
+        } else if (data.status === "downloading") {
+          setStatus("downloading");
+        } else if (data.status === "downloaded") {
+          setStatus("downloaded");
+        } else if (data.status === "error") {
+          setStatus("error");
+          console.error("Update error:", data.message);
+        }
+      }
+    );
 
-  const handleLike = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onToggleFavorite?.(post);
+    const removeProgressListener = window.api.onUpdateProgress(
+      (percent: number) => {
+        setProgress(percent);
+      }
+    );
+
+    return () => {
+      removeStatusListener();
+      removeProgressListener();
+    };
+  }, []);
+
+  const handleAction = () => {
+    if (status === "available") {
+      window.api.startDownload();
+      if (!isPortable) {
+        setStatus("downloading");
+      } else {
+        setIsOpen(false);
+      }
+    } else if (status === "downloaded") {
+      window.api.quitAndInstall();
+    }
   };
 
   return (
-    <div className="group relative aspect-[2/3] w-full overflow-hidden rounded-lg border bg-card transition-all hover:shadow-md hover:shadow-primary/10">
-      {/* Кликабельная область для открытия (картинка) */}
-      <button
-        type="button"
-        onClick={onClick}
-        className="w-full h-full focus:outline-none cursor-zoom-in"
-        aria-label={`View post ${post.id}`}
-      >
-        {post.previewUrl ? (
-          <img
-            src={post.previewUrl}
-            alt={`Post ${post.id}`}
-            loading="lazy"
-            className={cn(
-              "h-full w-full object-cover transition-transform duration-300",
-              "group-hover:scale-105",
-              post.isViewed && "opacity-60 grayscale-[0.3]"
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle className="flex gap-2 items-center">
+            <RefreshCw className="w-5 h-5 text-primary" />
+            {t("updates.newVersionTitle", "Update Available")}
+          </DialogTitle>
+          <DialogDescription>
+            {t(
+              "updates.newVersionDesc",
+              "A new version {{version}} is available.",
+              { version }
             )}
-          />
-        ) : (
-          <div className="flex justify-center items-center w-full h-full text-xs bg-muted text-muted-foreground">
-            No Preview
-          </div>
-        )}
-      </button>
+          </DialogDescription>
+        </DialogHeader>
 
-      {/* --- Overlays --- */}
-
-      {/* 1. Video Indicator (Top Right) */}
-      {isVid && (
-        <div className="absolute right-2 top-2 rounded-full bg-black/50 p-1.5 backdrop-blur-sm pointer-events-none">
-          <Play className="w-3 h-3 text-white fill-white" />
-        </div>
-      )}
-
-      {/* 2. Interactive Actions (Top Left) */}
-      <div className="flex absolute top-2 left-2 z-10 gap-1 items-center">
-        {/* Кнопка ЛАЙКА */}
-        <button
-          onClick={handleLike}
-          className={cn(
-            "p-1.5 rounded-full shadow-sm transition-colors backdrop-blur-md",
-            post.isFavorited
-              ? "bg-red-500/90 hover:bg-red-600"
-              : "bg-black/40 hover:bg-black/60"
+        <div className="py-4">
+          {status === "downloading" && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Downloading...</span>
+                <span>{Math.round(progress)}%</span>
+              </div>
+              <Progress value={progress} className="h-2" />
+            </div>
           )}
-        >
-          <Heart
-            className={cn(
-              "w-3.5 h-3.5 transition-colors",
-              post.isFavorited
-                ? "text-white fill-white"
-                : "text-white/70 hover:text-white"
-            )}
-          />
-        </button>
 
-        {/* Индикатор "Просмотрено" (неинтерактивный) */}
-        {post.isViewed && (
-          <div className="p-1.5 rounded-full shadow-sm bg-primary/90 pointer-events-none">
-            <Check className="w-3.5 h-3.5 stroke-[3] text-primary-foreground" />
-          </div>
-        )}
+          {status === "downloaded" && (
+            <div className="p-3 text-sm text-green-500 rounded-md bg-green-500/10">
+              Update downloaded and ready to install.
+            </div>
+          )}
+
+          {status === "error" && (
+            <div className="p-3 text-sm text-red-500 rounded-md bg-red-500/10">
+              Failed to download update. Please try again later.
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setIsOpen(false)}>
+            {t("common.cancel", "Cancel")}
+          </Button>
+
+          <Button onClick={handleAction} disabled={status === "downloading"}>
+            {status === "available" && (
+              <>
+                <Download className="mr-2 w-4 h-4" />
+                {isPortable
+                  ? "Open Download Page"
+                  : t("updates.download", "Download")}
+              </>
+            )}
+            {status === "downloading" && (
+              <>
+                <Loader2 className="mr-2 w-4 h-4 animate-spin" />
+                Downloading...
+              </>
+            )}
+            {status === "downloaded" &&
+              t("updates.restart", "Restart & Install")}
+            {status === "error" && "Retry"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+</file>
+
+<file path="src/renderer/components/pages/Browse.tsx">
+import React, { useState, forwardRef, useMemo } from "react";
+import {
+  useInfiniteQuery,
+  useQueryClient,
+  useMutation,
+  InfiniteData,
+} from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { VirtuosoGrid } from "react-virtuoso";
+import { Search, Loader2, FilterX } from "lucide-react";
+
+import { Input } from "../ui/input";
+import { PostCard } from "../gallery/PostCard";
+import { cn } from "../../lib/utils";
+import type { Post } from "../../../main/db/schema";
+import { useViewerStore } from "../../store/viewerStore";
+import { useDebounce } from "../../lib/hooks/useDebounce";
+
+// --- Grid Components (Virtuoso) ---
+
+const GridContainer = forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "grid grid-cols-2 gap-4 p-4 pb-32 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6",
+      className
+    )}
+    {...props}
+  />
+));
+GridContainer.displayName = "GridContainer";
+
+const ItemContainer = forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div ref={ref} className={cn("w-full aspect-[2/3]", className)} {...props} />
+));
+ItemContainer.displayName = "ItemContainer";
+
+// --- Main Component ---
+
+export const Browse = () => {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+  const openViewer = useViewerStore((state) => state.open);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 500);
+
+  const queryKey = useMemo(
+    () => ["posts", "browse", { tags: debouncedSearch }],
+    [debouncedSearch]
+  );
+
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useInfiniteQuery({
+      queryKey: ["browse-posts"],
+      queryFn: async ({ pageParam = 1 }) => {
+        return window.api.getArtistPosts({
+          page: pageParam,
+          artistId: undefined,
+        });
+      },
+      getNextPageParam: (lastPage, allPages) => {
+        return lastPage.length === 50 ? allPages.length + 1 : undefined;
+      },
+      initialPageParam: 1,
+    });
+
+  const allPosts = useMemo(
+    () => data?.pages.flatMap((page) => page) || [],
+    [data]
+  );
+
+  const viewMutation = useMutation({
+    mutationFn: async (postId: number) => {
+      await window.api.updatePost(postId, { isViewed: true });
+    },
+    onSuccess: (_, postId) => {
+      queryClient.setQueryData<InfiniteData<Post[]>>(queryKey, (oldData) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page) =>
+            page.map((post) =>
+              post.id === postId ? { ...post, isViewed: true } : post
+            )
+          ),
+        };
+      });
+    },
+  });
+
+  const handlePostClick = (index: number) => {
+    const post = allPosts[index];
+    if (post && !post.isViewed) {
+      viewMutation.mutate(post.id);
+    }
+
+    openViewer({
+      origin: { kind: "browse", filters: debouncedSearch },
+      ids: allPosts.map((p) => p.id),
+      initialIndex: index,
+      listKey: `browse-${debouncedSearch}`,
+    });
+  };
+
+  const handleToggleFavorite = async (post: Post) => {
+    const newState = !post.isFavorited;
+    queryClient.setQueryData<InfiniteData<Post[]>>(queryKey, (oldData) => {
+      if (!oldData) return oldData;
+      return {
+        ...oldData,
+        pages: oldData.pages.map((page) =>
+          page.map((p) =>
+            p.id === post.id ? { ...p, isFavorited: newState } : p
+          )
+        ),
+      };
+    });
+    await window.api.updatePost(post.id, { isFavorited: newState });
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-background">
+      <div className="flex z-10 items-center px-4 py-3 border-b backdrop-blur shrink-0 bg-background/50">
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={t(
+              "browse.searchPlaceholder",
+              "Filter tags in library..."
+            )}
+            className="pl-9 h-9"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <div className="ml-auto text-xs text-muted-foreground">
+          {allPosts.length} items
+        </div>
       </div>
 
-      {/* 3. Rating Gradient (Bottom) */}
-      <div className="flex absolute inset-0 flex-col justify-end p-3 bg-gradient-to-t via-transparent to-transparent opacity-0 transition-opacity duration-200 pointer-events-none from-black/80 group-hover:opacity-100">
-        <span
-          className={cn(
-            "text-xs font-bold uppercase tracking-wider",
-            post.rating === "e"
-              ? "text-red-400"
-              : post.rating === "q"
-              ? "text-yellow-400"
-              : "text-green-400"
-          )}
-        >
-          {post.rating === "s"
-            ? "Safe"
-            : post.rating === "q"
-            ? "Quest."
-            : "Explicit"}
-        </span>
+      <div className="flex-1 min-h-0">
+        {isLoading ? (
+          <div className="flex justify-center items-center h-full text-muted-foreground">
+            <Loader2 className="w-8 h-8 animate-spin" />
+          </div>
+        ) : allPosts.length === 0 ? (
+          <div className="flex flex-col gap-2 justify-center items-center h-full text-muted-foreground">
+            <FilterX className="w-12 h-12 opacity-50" />
+            <p>No posts found</p>
+          </div>
+        ) : (
+          <VirtuosoGrid
+            style={{ height: "100%" }}
+            totalCount={allPosts.length}
+            endReached={() => {
+              if (hasNextPage && !isFetchingNextPage) {
+                fetchNextPage();
+              }
+            }}
+            components={{
+              List: GridContainer,
+              Item: ItemContainer,
+              Footer: () =>
+                isFetchingNextPage ? (
+                  <div className="flex col-span-full justify-center py-4 w-full">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  </div>
+                ) : null,
+            }}
+            itemContent={(index) => {
+              const post = allPosts[index];
+              if (!post) return null;
+
+              return (
+                <PostCard
+                  post={post}
+                  onClick={() => handlePostClick(index)}
+                  onToggleFavorite={() => handleToggleFavorite(post)}
+                />
+              );
+            }}
+          />
+        )}
       </div>
     </div>
   );
@@ -3974,6 +3838,24 @@ export function getArtistTag(
   }
   // Для Tag: 'tag_name' (нижний регистр, пробелы в подчеркивания)
   return trimmedName.toLowerCase().replace(/ /g, "_");
+}
+</file>
+
+<file path="src/renderer/lib/hooks/useDebounce.ts">
+import { useEffect, useState } from "react";
+
+export function useDebounce<T>(value: T, delay?: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedValue(value), delay || 500);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
 }
 </file>
 
@@ -4029,22 +3911,21 @@ export type CredsFormValues = z.infer<typeof credsBaseSchema>;
 <file path="src/renderer/store/viewerStore.ts">
 import { create } from "zustand";
 
-// Откуда открыт Viewer (контекст)
 export type ViewerOrigin =
   | { kind: "browse"; filters?: string }
   | { kind: "favorites" }
   | { kind: "updates" }
   | { kind: "artist"; artistId: number };
 
-// Очередь просмотра
 export interface ViewerQueue {
   origin: ViewerOrigin;
   ids: number[];
-  initialIndex: number; // Важное поле: с чего начинать
+  initialIndex: number;
   listKey: string;
-  totalGlobalCount?: number; // Optional: total count from DB (e.g., 183) vs loaded array length
-  hasNextPage?: boolean; // Optional: whether more pages can be loaded
-  onLoadMore?: () => void | Promise<void>; // Optional: callback to load more posts
+  totalGlobalCount?: number;
+  hasNextPage?: boolean;
+  onLoadMore?: () => void | Promise<void>;
+  fetchNextPage?: () => void;
 }
 
 interface ViewerState {
@@ -4056,7 +3937,7 @@ interface ViewerState {
   currentIndex: number;
   currentPostId: number | null;
 
-  open: (queue: ViewerQueue) => void; // Принимаем ТОЛЬКО объект очереди
+  open: (queue: ViewerQueue) => void;
   close: () => void;
 
   next: () => void;
@@ -4065,7 +3946,7 @@ interface ViewerState {
   toggleTagsDrawer: () => void;
   setControlsVisible: (visible: boolean) => void;
   updateQueueIds: (ids: number[]) => void;
-  appendQueueIds: (newIds: number[]) => void; // Append new IDs to existing queue
+  appendQueueIds: (newIds: number[]) => void;
 }
 
 export const useViewerStore = create<ViewerState>((set, get) => ({
@@ -4076,9 +3957,7 @@ export const useViewerStore = create<ViewerState>((set, get) => ({
   currentIndex: 0,
   currentPostId: null,
 
-  // ИСПРАВЛЕННАЯ ЛОГИКА OPEN:
   open: (queue) => {
-    // Берем initialIndex прямо из объекта очереди
     const safeIndex = Math.max(
       0,
       Math.min(queue.initialIndex, queue.ids.length - 1)
@@ -4087,8 +3966,8 @@ export const useViewerStore = create<ViewerState>((set, get) => ({
     set({
       isOpen: true,
       queue,
-      currentIndex: safeIndex, // Используем правильный индекс
-      currentPostId: queue.ids[safeIndex] || null, // Устанавливаем правильный ID
+      currentIndex: safeIndex,
+      currentPostId: queue.ids[safeIndex] || null,
       controlsVisible: true,
       isTagsDrawerOpen: false,
     });
@@ -4104,6 +3983,14 @@ export const useViewerStore = create<ViewerState>((set, get) => ({
   next: () => {
     const { queue, currentIndex } = get();
     if (!queue) return;
+
+    if (
+      queue.hasNextPage &&
+      queue.fetchNextPage &&
+      currentIndex >= queue.ids.length - 10
+    ) {
+      queue.fetchNextPage();
+    }
 
     if (currentIndex < queue.ids.length - 1) {
       const newIndex = currentIndex + 1;
@@ -4143,7 +4030,6 @@ export const useViewerStore = create<ViewerState>((set, get) => ({
   appendQueueIds: (newIds) =>
     set((state) => {
       if (!state.queue) return {};
-      // Append new IDs, avoiding duplicates
       const existingIds = new Set(state.queue.ids);
       const uniqueNewIds = newIds.filter((id) => !existingIds.has(id));
       return {
@@ -4283,339 +4169,116 @@ repomix-output.txt
 .repomix/
 </file>
 
-<file path="src/main/services/posts.service.ts">
-import { eq, count, desc, and, like } from "drizzle-orm";
-import { getDatabase } from "../db";
-import { posts } from "../db/schema";
-import type { Post } from "../db/schema";
-
-export type PostUpdateChanges = {
-  rating?: string;
-  tags?: string;
-  title?: string;
-  isViewed?: boolean;
-  isFavorited?: boolean;
-  fileUrl?: string;
-  previewUrl?: string;
-  sampleUrl?: string;
-};
-
-export type GetPostsParams = {
-  artistId?: number;
-  limit: number;
-  offset: number;
-  filters?: {
-    tags?: string;
-    rating?: "s" | "q" | "e";
-    isFavorited?: boolean;
-    isViewed?: boolean;
-  };
-};
-
-export class PostsService {
-  private get db() {
-    return getDatabase();
-  }
-
-  async getPosts(params: GetPostsParams) {
-    const conditions = [];
-
-    if (params.artistId) {
-      conditions.push(eq(posts.artistId, params.artistId));
-    }
-
-    if (params.filters) {
-      if (params.filters.tags) {
-        conditions.push(like(posts.tags, `%${params.filters.tags}%`));
-      }
-      if (params.filters.rating) {
-        conditions.push(eq(posts.rating, params.filters.rating));
-      }
-      if (params.filters.isFavorited !== undefined) {
-        conditions.push(eq(posts.isFavorited, params.filters.isFavorited));
-      }
-      if (params.filters.isViewed !== undefined) {
-        conditions.push(eq(posts.isViewed, params.filters.isViewed));
-      }
-    }
-
-    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-
-    return this.db
-      .select()
-      .from(posts)
-      .where(whereClause)
-      .orderBy(desc(posts.publishedAt))
-      .limit(params.limit)
-      .offset(params.offset);
-  }
-
-  async getPostsCount(
-    params: Omit<GetPostsParams, "limit" | "offset">
-  ): Promise<number> {
-    try {
-      const conditions = [];
-
-      if (params.artistId) conditions.push(eq(posts.artistId, params.artistId));
-
-      if (params.filters) {
-        if (params.filters.tags)
-          conditions.push(like(posts.tags, `%${params.filters.tags}%`));
-        if (params.filters.rating)
-          conditions.push(eq(posts.rating, params.filters.rating));
-        if (params.filters.isFavorited !== undefined)
-          conditions.push(eq(posts.isFavorited, params.filters.isFavorited));
-      }
-
-      const whereClause =
-        conditions.length > 0 ? and(...conditions) : undefined;
-
-      const result = await this.db
-        .select({ count: count() })
-        .from(posts)
-        .where(whereClause);
-
-      return result[0]?.count ?? 0;
-    } catch (error) {
-      console.error("Failed to get posts count:", error);
-      return 0;
-    }
-  }
-
-  async getPostById(postId: number): Promise<Post | null> {
-    const result = await this.db
-      .select()
-      .from(posts)
-      .where(eq(posts.id, postId))
-      .limit(1);
-
-    return (result[0] as Post) ?? null;
-  }
-
-  async updatePost(
-    postId: number,
-    changes: PostUpdateChanges
-  ): Promise<boolean> {
-    const updateData: Partial<typeof posts.$inferInsert> = {};
-
-    if (changes.rating !== undefined) updateData.rating = changes.rating;
-    if (changes.tags !== undefined) updateData.tags = changes.tags;
-    if (changes.title !== undefined) updateData.title = changes.title;
-    if (changes.fileUrl !== undefined) updateData.fileUrl = changes.fileUrl;
-    if (changes.previewUrl !== undefined)
-      updateData.previewUrl = changes.previewUrl;
-    if (changes.sampleUrl !== undefined)
-      updateData.sampleUrl = changes.sampleUrl;
-    if (changes.isViewed !== undefined) updateData.isViewed = changes.isViewed;
-    if (changes.isFavorited !== undefined)
-      updateData.isFavorited = changes.isFavorited;
-
-    if (Object.keys(updateData).length === 0) return false;
-
-    const result = await this.db
-      .update(posts)
-      .set(updateData)
-      .where(eq(posts.id, postId))
-      .run();
-
-    return result.changes > 0;
-  }
-
-  async resetPostCache(postId: number): Promise<boolean> {
-    return this.updatePost(postId, { isViewed: false });
-  }
-}
-</file>
-
-<file path="src/renderer/components/gallery/ArtistGallery.tsx">
-import React, { forwardRef, useMemo } from "react";
-import {
-  useInfiniteQuery,
-  useQueryClient,
-  useMutation,
-  InfiniteData,
-} from "@tanstack/react-query";
-import { useTranslation } from "react-i18next";
-import { ArrowLeft, ExternalLink, Wrench, Loader2 } from "lucide-react";
-import { VirtuosoGrid } from "react-virtuoso";
-import { Button } from "../ui/button";
-import type { Artist, Post } from "../../../main/db/schema";
+<file path="src/renderer/components/gallery/PostCard.tsx">
+import React from "react";
+import { Play, Check, Heart } from "lucide-react";
 import { cn } from "../../lib/utils";
-import { useViewerStore } from "../../store/viewerStore";
-import { PostCard } from "../gallery/PostCard";
+import type { Post } from "../../../main/db/schema";
 
-interface ArtistGalleryProps {
-  artist: Artist;
-  onBack: () => void;
+interface PostCardProps {
+  post: Post;
+  onClick: () => void;
+  onToggleFavorite?: (post: Post) => void;
 }
 
-const GridContainer = forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "grid grid-cols-2 gap-4 p-4 pb-32 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5",
-      className
-    )}
-    {...props}
-  />
-));
-GridContainer.displayName = "GridContainer";
+const isVideo = (url: string) => url.endsWith(".mp4") || url.endsWith(".webm");
 
-const ItemContainer = forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("w-full aspect-[2/3]", className)} {...props} />
-));
-ItemContainer.displayName = "ItemContainer";
-
-export const ArtistGallery: React.FC<ArtistGalleryProps> = ({
-  artist,
-  onBack,
+export const PostCard: React.FC<PostCardProps> = ({
+  post,
+  onClick,
+  onToggleFavorite,
 }) => {
-  const { t } = useTranslation();
-  const queryClient = useQueryClient();
-  const openViewer = useViewerStore((state) => state.open);
+  const isVid = isVideo(post.fileUrl);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteQuery({
-      queryKey: ["posts", artist.id],
-      queryFn: async ({ pageParam = 1 }) => {
-        return window.api.getArtistPosts({
-          artistId: artist.id,
-          page: pageParam,
-        });
-      },
-      getNextPageParam: (lastPage, allPages) => {
-        return lastPage.length === 50 ? allPages.length + 1 : undefined;
-      },
-      initialPageParam: 1,
-    });
-
-  const allPosts = useMemo(
-    () => data?.pages.flatMap((page) => page) || [],
-    [data]
-  );
-
-  const viewMutation = useMutation({
-    mutationFn: async (postId: number) => {
-      await window.api.updatePost(postId, { isViewed: true });
-    },
-    onSuccess: (_, postId) => {
-      queryClient.setQueryData<InfiniteData<Post[]>>(
-        ["posts", artist.id],
-        (oldData) => {
-          if (!oldData) return oldData;
-          return {
-            ...oldData,
-            pages: oldData.pages.map((page) =>
-              page.map((post) =>
-                post.id === postId ? { ...post, isViewed: true } : post
-              )
-            ),
-          };
-        }
-      );
-    },
-  });
-
-  const handlePostClick = (index: number) => {
-    const post = allPosts[index];
-    if (post && !post.isViewed) {
-      viewMutation.mutate(post.id);
-    }
-
-    openViewer({
-      origin: { kind: "artist", artistId: artist.id },
-      ids: allPosts.map((p) => p.id),
-      initialIndex: index,
-      listKey: `artist-${artist.id}`,
-    });
-  };
-
-  const handleToggleFavorite = async (post: Post) => {
-    const newState = !post.isFavorited;
-    await window.api.updatePost(post.id, { isFavorited: newState });
-    queryClient.invalidateQueries({ queryKey: ["posts", artist.id] });
+  const handleLike = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onToggleFavorite?.(post);
   };
 
   return (
-    <div className="flex flex-col h-full bg-background">
-      {/* Header */}
-      <div className="flex z-10 shrink-0 justify-between items-center px-6 py-4 bg-background/95 border-b backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex gap-4 items-center">
-          <Button variant="ghost" size="icon" onClick={onBack}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h2 className="text-xl font-bold tracking-tight">{artist.name}</h2>
-            <p className="text-sm text-muted-foreground">
-              {allPosts.length} posts loaded
-            </p>
+    <div className="group relative aspect-[2/3] w-full overflow-hidden rounded-lg border bg-card transition-all hover:shadow-md hover:shadow-primary/10">
+      {/* Кликабельная область для открытия (картинка) */}
+      <button
+        type="button"
+        onClick={onClick}
+        className="w-full h-full focus:outline-none cursor-zoom-in"
+        aria-label={`View post ${post.id}`}
+      >
+        {post.previewUrl ? (
+          <img
+            src={post.previewUrl}
+            alt={`Post ${post.id}`}
+            loading="lazy"
+            className={cn(
+              "h-full w-full object-cover transition-transform duration-300",
+              "group-hover:scale-105",
+              post.isViewed && "opacity-60 grayscale-[0.3]"
+            )}
+          />
+        ) : (
+          <div className="flex justify-center items-center w-full h-full text-xs bg-muted text-muted-foreground">
+            No Preview
           </div>
+        )}
+      </button>
+
+      {/* --- Overlays --- */}
+
+      {/* 1. Video Indicator (Top Right) */}
+      {isVid && (
+        <div className="absolute right-2 top-2 rounded-full bg-black/50 p-1.5 backdrop-blur-sm pointer-events-none">
+          <Play className="w-3 h-3 text-white fill-white" />
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm">
-            <Wrench className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">Edit</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              window.api.openExternal(
-                `https://rule34.xxx/index.php?page=post&s=list&tags=${artist.tag}`
-              )
-            }
-          >
-            <ExternalLink className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">{t("artistGallery.web")}</span>
-          </Button>
-        </div>
+      )}
+
+      {/* 2. Interactive Actions (Top Left) */}
+      <div className="flex absolute top-2 left-2 z-10 gap-1 items-center">
+        {/* Кнопка ЛАЙКА */}
+        <button
+          onClick={handleLike}
+          className={cn(
+            "p-1.5 rounded-full shadow-sm transition-colors backdrop-blur-md",
+            post.isFavorited
+              ? "bg-red-500/90 hover:bg-red-600"
+              : "bg-black/40 hover:bg-black/60"
+          )}
+        >
+          <Heart
+            className={cn(
+              "w-3.5 h-3.5 transition-colors",
+              post.isFavorited
+                ? "text-white fill-white"
+                : "text-white/70 hover:text-white"
+            )}
+          />
+        </button>
+
+        {/* Индикатор "Просмотрено" (неинтерактивный) */}
+        {post.isViewed && (
+          <div className="p-1.5 rounded-full shadow-sm bg-primary/90 pointer-events-none">
+            <Check className="w-3.5 h-3.5 stroke-[3] text-primary-foreground" />
+          </div>
+        )}
       </div>
 
-      {/* Grid Content */}
-      <div className="flex-1 min-h-0">
-        {isLoading && allPosts.length === 0 ? (
-          <div className="flex justify-center items-center h-full text-muted-foreground">
-            <Loader2 className="w-8 h-8 animate-spin" />
-          </div>
-        ) : (
-          <VirtuosoGrid
-            style={{ height: "100%" }}
-            totalCount={allPosts.length}
-            endReached={() => {
-              if (hasNextPage && !isFetchingNextPage) {
-                fetchNextPage();
-              }
-            }}
-            components={{
-              List: GridContainer,
-              Item: ItemContainer,
-              Footer: () =>
-                isFetchingNextPage ? (
-                  <div className="flex col-span-full justify-center py-4 w-full">
-                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                  </div>
-                ) : null,
-            }}
-            itemContent={(index) => {
-              const post = allPosts[index];
-              if (!post) return null;
-
-              return (
-                <PostCard
-                  post={post}
-                  onClick={() => handlePostClick(index)}
-                  onToggleFavorite={() => handleToggleFavorite(post)}
-                />
-              );
-            }}
-          />
-        )}
+      {/* 3. Rating Gradient (Bottom) */}
+      <div className="flex absolute inset-0 flex-col justify-end p-3 bg-gradient-to-t via-transparent to-transparent opacity-0 transition-opacity duration-200 pointer-events-none from-black/80 group-hover:opacity-100">
+        <span
+          className={cn(
+            "text-xs font-bold uppercase tracking-wider",
+            post.rating === "e"
+              ? "text-red-400"
+              : post.rating === "q"
+              ? "text-yellow-400"
+              : "text-green-400"
+          )}
+        >
+          {post.rating === "s"
+            ? "Safe"
+            : post.rating === "q"
+            ? "Quest."
+            : "Explicit"}
+        </span>
       </div>
     </div>
   );
@@ -6755,6 +6418,416 @@ export default defineConfig({
 });
 </file>
 
+<file path="src/main/services/posts.service.ts">
+import { eq, count, desc, and, like } from "drizzle-orm";
+import { getDatabase } from "../db";
+import { posts } from "../db/schema";
+import type { Post } from "../db/schema";
+
+export type PostUpdateChanges = {
+  rating?: string;
+  tags?: string;
+  title?: string;
+  isViewed?: boolean;
+  isFavorited?: boolean;
+  fileUrl?: string;
+  previewUrl?: string;
+  sampleUrl?: string;
+};
+
+export type GetPostsParams = {
+  artistId?: number;
+  limit: number;
+  offset: number;
+  filters?: {
+    tags?: string;
+    rating?: "s" | "q" | "e";
+    isFavorited?: boolean;
+    isViewed?: boolean;
+  };
+};
+
+export class PostsService {
+  private get db() {
+    return getDatabase();
+  }
+
+  async getPosts(params: GetPostsParams) {
+    const conditions = [];
+
+    if (params.artistId) {
+      conditions.push(eq(posts.artistId, params.artistId));
+    }
+
+    if (params.filters) {
+      if (params.filters.tags) {
+        conditions.push(like(posts.tags, `%${params.filters.tags}%`));
+      }
+      if (params.filters.rating) {
+        conditions.push(eq(posts.rating, params.filters.rating));
+      }
+      if (params.filters.isFavorited !== undefined) {
+        conditions.push(eq(posts.isFavorited, params.filters.isFavorited));
+      }
+      if (params.filters.isViewed !== undefined) {
+        conditions.push(eq(posts.isViewed, params.filters.isViewed));
+      }
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    return this.db
+      .select()
+      .from(posts)
+      .where(whereClause)
+      .orderBy(desc(posts.publishedAt))
+      .limit(params.limit)
+      .offset(params.offset);
+  }
+
+  async toggleFavorite(postId: number): Promise<boolean> {
+    const db = getDatabase();
+
+    // 1. Получаем текущий статус (только нужное поле)
+    const post = await db.query.posts.findFirst({
+      where: eq(posts.id, postId),
+      columns: {
+        isFavorited: true,
+      },
+    });
+
+    if (!post) throw new Error(`Post ${postId} not found`);
+
+    const newState = !post.isFavorited;
+
+    // 2. Обновляем статус
+    await db
+      .update(posts)
+      .set({ isFavorited: newState })
+      .where(eq(posts.id, postId))
+      .run();
+
+    return newState;
+  }
+
+  async getPostsCount(
+    params: Omit<GetPostsParams, "limit" | "offset">
+  ): Promise<number> {
+    try {
+      const conditions = [];
+
+      if (params.artistId) conditions.push(eq(posts.artistId, params.artistId));
+
+      if (params.filters) {
+        if (params.filters.tags)
+          conditions.push(like(posts.tags, `%${params.filters.tags}%`));
+        if (params.filters.rating)
+          conditions.push(eq(posts.rating, params.filters.rating));
+        if (params.filters.isFavorited !== undefined)
+          conditions.push(eq(posts.isFavorited, params.filters.isFavorited));
+      }
+
+      const whereClause =
+        conditions.length > 0 ? and(...conditions) : undefined;
+
+      const result = await this.db
+        .select({ count: count() })
+        .from(posts)
+        .where(whereClause);
+
+      return result[0]?.count ?? 0;
+    } catch (error) {
+      console.error("Failed to get posts count:", error);
+      return 0;
+    }
+  }
+
+  async getPostById(postId: number): Promise<Post | null> {
+    const result = await this.db
+      .select()
+      .from(posts)
+      .where(eq(posts.id, postId))
+      .limit(1);
+
+    return (result[0] as Post) ?? null;
+  }
+
+  async updatePost(
+    postId: number,
+    changes: PostUpdateChanges
+  ): Promise<boolean> {
+    const updateData: Partial<typeof posts.$inferInsert> = {};
+
+    if (changes.rating !== undefined) updateData.rating = changes.rating;
+    if (changes.tags !== undefined) updateData.tags = changes.tags;
+    if (changes.title !== undefined) updateData.title = changes.title;
+    if (changes.fileUrl !== undefined) updateData.fileUrl = changes.fileUrl;
+    if (changes.previewUrl !== undefined)
+      updateData.previewUrl = changes.previewUrl;
+    if (changes.sampleUrl !== undefined)
+      updateData.sampleUrl = changes.sampleUrl;
+    if (changes.isViewed !== undefined) updateData.isViewed = changes.isViewed;
+    if (changes.isFavorited !== undefined)
+      updateData.isFavorited = changes.isFavorited;
+
+    if (Object.keys(updateData).length === 0) return false;
+
+    const result = await this.db
+      .update(posts)
+      .set(updateData)
+      .where(eq(posts.id, postId))
+      .run();
+
+    return result.changes > 0;
+  }
+
+  async resetArtistCache(artistId: number): Promise<boolean> {
+    const result = await this.db
+      .update(posts)
+      .set({ isViewed: false })
+      .where(eq(posts.artistId, artistId))
+      .run();
+
+    return result.changes > 0;
+  }
+
+  async resetPostCache(postId: number): Promise<boolean> {
+    return this.updatePost(postId, { isViewed: false });
+  }
+}
+</file>
+
+<file path="src/renderer/components/gallery/ArtistGallery.tsx">
+import React, { forwardRef, useMemo } from "react";
+import {
+  useInfiniteQuery,
+  useQueryClient,
+  useQuery,
+  useMutation,
+  InfiniteData,
+} from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { ArrowLeft, ExternalLink, Wrench, Loader2 } from "lucide-react";
+import { VirtuosoGrid } from "react-virtuoso";
+import { Button } from "../ui/button";
+import type { Artist, Post } from "../../../main/db/schema";
+import { cn } from "../../lib/utils";
+import { useViewerStore } from "../../store/viewerStore";
+import { PostCard } from "../gallery/PostCard";
+
+interface ArtistGalleryProps {
+  artist: Artist;
+  onBack: () => void;
+}
+
+const GridContainer = forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(
+      "grid grid-cols-2 gap-4 p-4 pb-32 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5",
+      className
+    )}
+    {...props}
+  />
+));
+GridContainer.displayName = "GridContainer";
+
+const ItemContainer = forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div ref={ref} className={cn("w-full aspect-[2/3]", className)} {...props} />
+));
+ItemContainer.displayName = "ItemContainer";
+
+// ... (все импорты остаются)
+
+export const ArtistGallery: React.FC<ArtistGalleryProps> = ({
+  artist,
+  onBack,
+}) => {
+  const { t } = useTranslation();
+  const queryClient = useQueryClient();
+
+  // Zustand Store
+  const openViewer = useViewerStore((state) => state.open);
+  const updateQueueIds = useViewerStore((state) => state.updateQueueIds);
+  const isOpen = useViewerStore((state) => state.isOpen);
+
+  const { data: totalCount = 0 } = useQuery({
+    queryKey: ["posts-count", artist.id],
+    queryFn: () => window.api.getArtistPostsCount(artist.id),
+  });
+
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useInfiniteQuery({
+      queryKey: ["posts", artist.id],
+      queryFn: async ({ pageParam = 1 }) => {
+        return window.api.getArtistPosts({
+          artistId: artist.id,
+          page: pageParam,
+        });
+      },
+      getNextPageParam: (lastPage, allPages) => {
+        return lastPage.length === 50 ? allPages.length + 1 : undefined;
+      },
+      initialPageParam: 1,
+    });
+
+  const allPosts = useMemo(
+    () => data?.pages.flatMap((page) => page) || [],
+    [data]
+  );
+
+  React.useEffect(() => {
+    if (isOpen && allPosts.length > 0) {
+      updateQueueIds(allPosts.map((p) => p.id));
+    }
+  }, [allPosts, isOpen, updateQueueIds]);
+
+  const handleResetCache = async () => {
+    if (!confirm(t("artistGallery.resetConfirm"))) return;
+    try {
+      await window.api.resetPostCache(artist.id);
+      queryClient.invalidateQueries({ queryKey: ["posts", artist.id] });
+    } catch (error) {
+      console.error("Failed to reset cache:", error);
+    }
+  };
+
+  const viewMutation = useMutation({
+    mutationFn: async (postId: number) => {
+      await window.api.updatePost(postId, { isViewed: true });
+    },
+    onSuccess: (_, postId) => {
+      queryClient.setQueryData<InfiniteData<Post[]>>(
+        ["posts", artist.id],
+        (oldData) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page) =>
+              page.map((post) =>
+                post.id === postId ? { ...post, isViewed: true } : post
+              )
+            ),
+          };
+        }
+      );
+    },
+  });
+
+  const handlePostClick = (index: number) => {
+    const post = allPosts[index];
+    if (!post) return;
+
+    if (!post.isViewed) {
+      viewMutation.mutate(post.id);
+    }
+
+    if (hasNextPage && index > allPosts.length - 10) {
+      fetchNextPage();
+    }
+
+    openViewer({
+      origin: { kind: "artist", artistId: artist.id },
+      ids: allPosts.map((p) => p.id),
+      initialIndex: index,
+      listKey: `artist-${artist.id}`,
+      hasNextPage,
+      fetchNextPage,
+    });
+  };
+
+  const handleToggleFavorite = async (post: Post) => {
+    const newState = !post.isFavorited;
+    await window.api.updatePost(post.id, { isFavorited: newState });
+    queryClient.invalidateQueries({ queryKey: ["posts", artist.id] });
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-background">
+      {/* Header */}
+      <div className="flex z-10 shrink-0 justify-between items-center px-6 py-4 bg-background/95 border-b backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex gap-4 items-center">
+          <Button variant="ghost" size="icon" onClick={onBack}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div>
+            <h2 className="text-xl font-bold tracking-tight">{artist.name}</h2>
+            <p className="text-sm text-muted-foreground">
+              {totalCount} {t("artistGallery.totalPosts")}
+            </p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleResetCache}>
+            <Wrench className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Edit</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              window.api.openExternal(
+                `https://rule34.xxx/index.php?page=post&s=list&tags=${artist.tag}`
+              )
+            }
+          >
+            <ExternalLink className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">{t("artistGallery.web")}</span>
+          </Button>
+        </div>
+      </div>
+
+      {/* Grid Content */}
+      <div className="flex-1 min-h-0">
+        {isLoading && allPosts.length === 0 ? (
+          <div className="flex justify-center items-center h-full text-muted-foreground">
+            <Loader2 className="w-8 h-8 animate-spin" />
+          </div>
+        ) : (
+          <VirtuosoGrid
+            style={{ height: "100%" }}
+            totalCount={allPosts.length}
+            endReached={() => {
+              if (hasNextPage && !isFetchingNextPage) {
+                fetchNextPage();
+              }
+            }}
+            components={{
+              List: GridContainer,
+              Item: ItemContainer,
+              Footer: () =>
+                isFetchingNextPage ? (
+                  <div className="flex col-span-full justify-center py-4 w-full">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  </div>
+                ) : null,
+            }}
+            itemContent={(index) => {
+              const post = allPosts[index];
+              if (!post) return null;
+
+              return (
+                <PostCard
+                  post={post}
+                  onClick={() => handlePostClick(index)}
+                  onToggleFavorite={() => handleToggleFavorite(post)}
+                />
+              );
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+};
+</file>
+
 <file path="docs/api.md">
 # API Documentation
 
@@ -8449,386 +8522,6 @@ npx electron-builder --linux
 4. Open a new issue with details
 </file>
 
-<file path="src/main/db/worker-types.ts">
-export type DbMethod =
-  // Database Maintenance
-  | "fixDatabaseSchema"
-  | "repairArtistTags"
-  | "runDeferredMaintenance"
-  // Artist Management
-  | "getTrackedArtists"
-  | "addArtist"
-  | "updateArtistLastChecked"
-  | "updateArtistProgress"
-  | "savePostsForArtist"
-  | "getPostsByArtist"
-  | "getPostsCountByArtist"
-  | "getPostById"
-  | "getArtistById"
-  | "searchArtists"
-  | "deleteArtist"
-  | "markPostAsViewed"
-  | "togglePostFavorite"
-  | "togglePostViewed"
-  | "resetPostCache"
-  | "updatePost"
-  // Settings & Security
-  | "getSettings"
-  | "saveSettings"
-  | "getSettingsStatus"
-  | "getApiKeyDecrypted"
-  | "logout"
-  // Backup
-  | "backup";
-
-/**
- * Request message sent from Main process to DB Worker
- */
-export interface WorkerRequest {
-  id: string;
-  type: DbMethod;
-  payload: unknown;
-}
-
-/**
- * Response message sent from DB Worker to Main process
- */
-export interface WorkerResponse {
-  id: string;
-  success: boolean;
-  data?: unknown;
-  error?: string;
-}
-</file>
-
-<file path="src/main/ipc/handlers/files.ts">
-import { ipcMain, app, shell, dialog, BrowserWindow } from "electron";
-import path from "path";
-import fs from "fs";
-import axios, { AxiosProgressEvent } from "axios";
-import { pipeline } from "stream/promises";
-import { logger } from "../../lib/logger";
-import { IPC_CHANNELS } from "../channels";
-import { z } from "zod";
-import { PostsService } from "../../services/posts.service";
-
-// Вспомогательная функция для получения главного окна Electron
-const getMainWindow = (): BrowserWindow | undefined => {
-  const windows = BrowserWindow.getAllWindows();
-  return windows.find((w) => w.isVisible() && !w.isDestroyed()) || windows[0];
-};
-
-const DOWNLOAD_ROOT = path.join(app.getPath("downloads"), "BooruClient");
-
-const DownloadFileSchema = z.object({
-  url: z
-    .string()
-    .url()
-    .refine((val) => val.startsWith("http://") || val.startsWith("https://"), {
-      message: "Only HTTP/HTTPS protocols are allowed for downloads.",
-    }),
-  filename: z
-    .string()
-    .min(1)
-    .regex(/^[\w\-. ]+$/, "Invalid filename characters"),
-});
-
-export const registerFileHandlers = (service: PostsService) => {
-  let totalBytes = 0;
-
-  // Хендлер скачивания с диалогом "Сохранить как"
-  ipcMain.handle(
-    IPC_CHANNELS.FILES.DOWNLOAD,
-    async (_event, url: unknown, filename: unknown) => {
-      const mainWindow = getMainWindow();
-      if (!mainWindow) {
-        logger.error("IPC: Main window not found for download.");
-        return { success: false, error: "Main window not available" };
-      }
-
-      // 1. Валидация входных данных через Zod
-      const validation = DownloadFileSchema.safeParse({ url, filename });
-
-      if (!validation.success) {
-        logger.error("IPC: Download validation failed", validation.error);
-        return { success: false, error: "Invalid URL or Filename" };
-      }
-
-      const { url: validUrl, filename: validFilename } = validation.data;
-
-      try {
-        const defaultDir = DOWNLOAD_ROOT;
-
-        // 2. Безопасное создание директории
-        if (!fs.existsSync(defaultDir)) {
-          try {
-            fs.mkdirSync(defaultDir, { recursive: true });
-          } catch (e) {
-            logger.error("Failed to create download directory", e);
-            // Не падаем, диалог просто откроется в дефолтной папке ОС
-          }
-        }
-
-        const defaultPath = path.join(defaultDir, validFilename);
-
-        const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
-          title: "Скачать файл",
-          defaultPath: defaultPath,
-          buttonLabel: "Скачать",
-          filters: [
-            {
-              name: "Media Files",
-              extensions: ["jpg", "jpeg", "png", "gif", "mp4", "webm"],
-            },
-            { name: "All Files", extensions: ["*"] },
-          ],
-        });
-
-        if (canceled || !filePath) {
-          logger.info("IPC: Download canceled by user");
-          return { success: false, canceled: true };
-        }
-
-        logger.info(`IPC: Downloading: ${validUrl} -> ${filePath}`);
-
-        const response = await axios({
-          method: "GET",
-          url: validUrl,
-          responseType: "stream",
-          headers: {
-            "User-Agent":
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          },
-          onDownloadProgress: (progressEvent: AxiosProgressEvent) => {
-            if (!mainWindow || !progressEvent.total) return;
-
-            totalBytes = progressEvent.total;
-            const percent = Math.round(
-              (progressEvent.loaded * 100) / totalBytes
-            );
-
-            mainWindow.webContents.send(IPC_CHANNELS.FILES.DOWNLOAD_PROGRESS, {
-              id: validFilename, // Используем валидированное имя как ID
-              percent: percent,
-            });
-          },
-        });
-
-        const writer = fs.createWriteStream(filePath);
-        await pipeline(response.data, writer);
-
-        mainWindow.webContents.send(IPC_CHANNELS.FILES.DOWNLOAD_PROGRESS, {
-          id: validFilename,
-          percent: 100,
-        });
-        logger.info(`IPC: Download success -> ${filePath}`);
-        return { success: true, path: filePath };
-      } catch (error) {
-        if (mainWindow) {
-          mainWindow.webContents.send(IPC_CHANNELS.FILES.DOWNLOAD_PROGRESS, {
-            id: validFilename,
-            percent: 0,
-          });
-        }
-        logger.error("IPC: Download failed:", error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : String(error),
-        };
-      }
-    }
-  );
-
-  // Хендлер открытия папки
-  ipcMain.handle(
-    IPC_CHANNELS.FILES.OPEN_FOLDER,
-    async (_, filePathOrName: string) => {
-      if (!filePathOrName || typeof filePathOrName !== "string") return false;
-
-      try {
-        let fullPath = filePathOrName;
-
-        if (!path.isAbsolute(filePathOrName)) {
-          fullPath = path.join(DOWNLOAD_ROOT, filePathOrName);
-        }
-
-        const normalizedPath = path.normalize(fullPath);
-
-        if (!normalizedPath.startsWith(DOWNLOAD_ROOT)) {
-          logger.error(
-            `SECURITY VIOLATION: Attempt to open path outside safe directory: ${normalizedPath}`
-          );
-          shell.openPath(DOWNLOAD_ROOT);
-          return false;
-        }
-
-        if (fs.existsSync(normalizedPath)) {
-          shell.showItemInFolder(normalizedPath);
-          return true;
-        }
-
-        if (fs.existsSync(DOWNLOAD_ROOT)) {
-          await shell.openPath(DOWNLOAD_ROOT);
-          return true;
-        }
-
-        return false;
-      } catch (error) {
-        logger.error("Failed to open folder:", error);
-        return false;
-      }
-    }
-  );
-
-  // Обработчик для Reset Post Cache
-  ipcMain.handle(
-    IPC_CHANNELS.DB.RESET_POST_CACHE,
-    async (_, postId: unknown) => {
-      const result = z.number().int().positive().safeParse(postId);
-      if (!result.success) {
-        logger.warn(
-          `Validation failed for resetPostCache: ${result.error.message}`
-        );
-        return false;
-      }
-
-      try {
-        return await service.resetPostCache(result.data);
-      } catch (error) {
-        logger.error(`[IPC] Failed to reset post cache`, error);
-        return false;
-      }
-    }
-  );
-};
-</file>
-
-<file path="src/main/ipc/handlers/posts.ts">
-import { ipcMain } from "electron";
-import { z } from "zod";
-import { IPC_CHANNELS } from "../channels";
-import { PostsService } from "../../services/posts.service";
-import { logger } from "../../lib/logger";
-
-const PostFilterSchema = z
-  .object({
-    tags: z.string().optional(),
-    rating: z.enum(["s", "q", "e"]).optional(),
-    isFavorited: z.boolean().optional(),
-    isViewed: z.boolean().optional(),
-  })
-  .partial();
-
-const GetPostsSchema = z.object({
-  artistId: z.number().optional(),
-  page: z.number().default(1),
-  limit: z.number().int().min(1).default(50),
-  filters: PostFilterSchema.optional(),
-});
-
-const UpdatePostSchema = z.object({
-  postId: z.number().int().positive(),
-  changes: z
-    .object({
-      rating: z.string().optional(),
-      tags: z.string().optional(),
-      title: z.string().optional(),
-      isViewed: z.boolean().optional(),
-      isFavorited: z.boolean().optional(),
-      fileUrl: z.string().optional(),
-      previewUrl: z.string().optional(),
-      sampleUrl: z.string().optional(),
-    })
-    .partial(),
-});
-
-export const registerPostHandlers = (service: PostsService) => {
-  // 1. GET POSTS (Universal)
-  ipcMain.handle(IPC_CHANNELS.DB.GET_POSTS, async (_, payload: unknown) => {
-    logger.info(
-      `IPC: [db:get-posts] Request payload:`,
-      JSON.stringify(payload)
-    );
-    const validation = GetPostsSchema.safeParse(payload);
-    if (!validation.success) {
-      logger.error(`Validation Error: ${validation.error.message}`);
-      throw new Error(`Validation Error: ${validation.error.message}`);
-    }
-
-    const { artistId, page, limit, filters } = validation.data;
-    const offset = (page - 1) * limit;
-
-    try {
-      return await service.getPosts({
-        artistId,
-        limit,
-        offset,
-        filters,
-      });
-    } catch (error) {
-      logger.error(`IPC: [db:get-posts] error:`, error);
-      throw new Error("Failed to fetch posts.");
-    }
-  });
-
-  // 2. GET COUNT
-  ipcMain.handle(
-    IPC_CHANNELS.DB.GET_POSTS_COUNT,
-    async (_, payload: unknown) => {
-      // Валидация для счетчика
-      const complexValidation = z
-        .object({
-          artistId: z.number().optional(),
-          filters: PostFilterSchema.optional(),
-        })
-        .safeParse(payload);
-
-      const numberValidation = z
-        .number()
-        .int()
-        .positive()
-        .optional()
-        .nullable()
-        .safeParse(payload);
-
-      let params = {};
-
-      if (complexValidation.success) {
-        params = complexValidation.data;
-      } else if (numberValidation.success && numberValidation.data) {
-        params = { artistId: numberValidation.data };
-      }
-
-      try {
-        return await service.getPostsCount(params);
-      } catch (err) {
-        logger.error("Failed to get posts count:", err);
-        return 0;
-      }
-    }
-  );
-
-  // 3. UPDATE POST
-  ipcMain.handle(IPC_CHANNELS.DB.UPDATE_POST, async (_, payload: unknown) => {
-    const validation = UpdatePostSchema.safeParse(payload);
-    if (!validation.success) {
-      logger.warn(
-        `[IPC] UPDATE_POST failed validation: ${validation.error.message}`
-      );
-      return false;
-    }
-
-    try {
-      const { postId, changes } = validation.data;
-      return await service.updatePost(postId, changes);
-    } catch (error) {
-      logger.error(`[IPC] Failed to update post`, error);
-      return false;
-    }
-  });
-};
-</file>
-
 <file path="drizzle/meta/0000_snapshot.json">
 {
   "version": "5",
@@ -9132,6 +8825,74 @@ export const registerPostHandlers = (service: PostsService) => {
 }
 </file>
 
+<file path="src/main/db/worker-types.ts">
+export type DbMethod =
+  // Database Maintenance
+  | "fixDatabaseSchema"
+  | "repairArtistTags"
+  | "runDeferredMaintenance"
+  // Artist Management
+  | "getTrackedArtists"
+  | "addArtist"
+  | "updateArtistLastChecked"
+  | "updateArtistProgress"
+  | "savePostsForArtist"
+  | "getPostsByArtist"
+  | "getPostsCountByArtist"
+  | "getPostById"
+  | "getArtistById"
+  | "searchArtists"
+  | "deleteArtist"
+  | "markPostAsViewed"
+  | "togglePostFavorite"
+  | "togglePostViewed"
+  | "resetPostCache"
+  | "updatePost"
+  // Settings & Security
+  | "getSettings"
+  | "saveSettings"
+  | "getSettingsStatus"
+  | "getApiKeyDecrypted"
+  | "logout"
+  // Backup
+  | "backup";
+
+/**
+ * Request message sent from Main process to DB Worker
+ */
+export interface WorkerRequest {
+  id: string;
+  type: DbMethod;
+  payload: unknown;
+}
+
+/**
+ * Response message sent from DB Worker to Main process
+ */
+export interface WorkerResponse {
+  id: string;
+  success: boolean;
+  data?: unknown;
+  error?: string;
+}
+</file>
+
+<file path="drizzle/meta/_journal.json">
+{
+  "version": "5",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1766130825943,
+      "tag": "0000_tearful_jimmy_woo",
+      "breakpoints": true
+    }
+  ]
+}
+</file>
+
 <file path="src/main/ipc/channels.ts">
 export const IPC_CHANNELS = {
   APP: {
@@ -9178,6 +8939,383 @@ export const IPC_CHANNELS = {
     DOWNLOAD_PROGRESS: "files:download-progress",
   },
 } as const;
+</file>
+
+<file path="src/main/ipc/handlers/files.ts">
+import { ipcMain, app, shell, dialog, BrowserWindow } from "electron";
+import path from "path";
+import fs from "fs";
+import axios, { AxiosProgressEvent } from "axios";
+import { pipeline } from "stream/promises";
+import { logger } from "../../lib/logger";
+import { IPC_CHANNELS } from "../channels";
+import { z } from "zod";
+
+// Вспомогательная функция для получения главного окна Electron
+const getMainWindow = (): BrowserWindow | undefined => {
+  const windows = BrowserWindow.getAllWindows();
+  return windows.find((w) => w.isVisible() && !w.isDestroyed()) || windows[0];
+};
+
+const DOWNLOAD_ROOT = path.join(app.getPath("downloads"), "BooruClient");
+
+const DownloadFileSchema = z.object({
+  url: z
+    .string()
+    .url()
+    .refine((val) => val.startsWith("http://") || val.startsWith("https://"), {
+      message: "Only HTTP/HTTPS protocols are allowed for downloads.",
+    }),
+  filename: z
+    .string()
+    .min(1)
+    .regex(/^[\w\-. ]+$/, "Invalid filename characters"),
+});
+
+export const registerFileHandlers = () => {
+  let totalBytes = 0;
+
+  // Хендлер скачивания с диалогом "Сохранить как"
+  ipcMain.handle(
+    IPC_CHANNELS.FILES.DOWNLOAD,
+    async (_event, url: unknown, filename: unknown) => {
+      const mainWindow = getMainWindow();
+      if (!mainWindow) {
+        logger.error("IPC: Main window not found for download.");
+        return { success: false, error: "Main window not available" };
+      }
+
+      // 1. Валидация входных данных через Zod
+      const validation = DownloadFileSchema.safeParse({ url, filename });
+
+      if (!validation.success) {
+        logger.error("IPC: Download validation failed", validation.error);
+        return { success: false, error: "Invalid URL or Filename" };
+      }
+
+      const { url: validUrl, filename: validFilename } = validation.data;
+
+      try {
+        const defaultDir = DOWNLOAD_ROOT;
+
+        // 2. Безопасное создание директории
+        if (!fs.existsSync(defaultDir)) {
+          try {
+            fs.mkdirSync(defaultDir, { recursive: true });
+          } catch (e) {
+            logger.error("Failed to create download directory", e);
+            // Не падаем, диалог просто откроется в дефолтной папке ОС
+          }
+        }
+
+        const defaultPath = path.join(defaultDir, validFilename);
+
+        const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+          title: "Скачать файл",
+          defaultPath: defaultPath,
+          buttonLabel: "Скачать",
+          filters: [
+            {
+              name: "Media Files",
+              extensions: ["jpg", "jpeg", "png", "gif", "mp4", "webm"],
+            },
+            { name: "All Files", extensions: ["*"] },
+          ],
+        });
+
+        if (canceled || !filePath) {
+          logger.info("IPC: Download canceled by user");
+          return { success: false, canceled: true };
+        }
+
+        logger.info(`IPC: Downloading: ${validUrl} -> ${filePath}`);
+
+        const response = await axios({
+          method: "GET",
+          url: validUrl,
+          responseType: "stream",
+          headers: {
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+          },
+          onDownloadProgress: (progressEvent: AxiosProgressEvent) => {
+            if (!mainWindow || !progressEvent.total) return;
+
+            totalBytes = progressEvent.total;
+            const percent = Math.round(
+              (progressEvent.loaded * 100) / totalBytes
+            );
+
+            mainWindow.webContents.send(IPC_CHANNELS.FILES.DOWNLOAD_PROGRESS, {
+              id: validFilename, // Используем валидированное имя как ID
+              percent: percent,
+            });
+          },
+        });
+
+        const writer = fs.createWriteStream(filePath);
+        await pipeline(response.data, writer);
+
+        mainWindow.webContents.send(IPC_CHANNELS.FILES.DOWNLOAD_PROGRESS, {
+          id: validFilename,
+          percent: 100,
+        });
+        logger.info(`IPC: Download success -> ${filePath}`);
+        return { success: true, path: filePath };
+      } catch (error) {
+        if (mainWindow) {
+          mainWindow.webContents.send(IPC_CHANNELS.FILES.DOWNLOAD_PROGRESS, {
+            id: validFilename,
+            percent: 0,
+          });
+        }
+        logger.error("IPC: Download failed:", error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    }
+  );
+
+  // Хендлер открытия папки
+  ipcMain.handle(
+    IPC_CHANNELS.FILES.OPEN_FOLDER,
+    async (_, filePathOrName: string) => {
+      if (!filePathOrName || typeof filePathOrName !== "string") return false;
+
+      try {
+        let fullPath = filePathOrName;
+
+        if (!path.isAbsolute(filePathOrName)) {
+          fullPath = path.join(DOWNLOAD_ROOT, filePathOrName);
+        }
+
+        const normalizedPath = path.normalize(fullPath);
+
+        if (!normalizedPath.startsWith(DOWNLOAD_ROOT)) {
+          logger.error(
+            `SECURITY VIOLATION: Attempt to open path outside safe directory: ${normalizedPath}`
+          );
+          shell.openPath(DOWNLOAD_ROOT);
+          return false;
+        }
+
+        if (fs.existsSync(normalizedPath)) {
+          shell.showItemInFolder(normalizedPath);
+          return true;
+        }
+
+        if (fs.existsSync(DOWNLOAD_ROOT)) {
+          await shell.openPath(DOWNLOAD_ROOT);
+          return true;
+        }
+
+        return false;
+      } catch (error) {
+        logger.error("Failed to open folder:", error);
+        return false;
+      }
+    }
+  );
+};
+</file>
+
+<file path="src/main/ipc/handlers/posts.ts">
+import { ipcMain } from "electron";
+import { z } from "zod";
+import { IPC_CHANNELS } from "../channels";
+import { PostsService } from "../../services/posts.service";
+import { logger } from "../../lib/logger";
+
+// --- Schemas ---
+
+const PostFilterSchema = z
+  .object({
+    tags: z.string().optional(),
+    rating: z.enum(["s", "q", "e"]).optional(),
+    isFavorited: z.boolean().optional(),
+    isViewed: z.boolean().optional(),
+  })
+  .partial();
+
+const GetPostsSchema = z.object({
+  artistId: z.number().optional(),
+  page: z.number().default(1),
+  limit: z.number().int().min(1).default(50),
+  filters: PostFilterSchema.optional(),
+});
+
+const UpdatePostSchema = z.object({
+  postId: z.number().int().positive(),
+  changes: z
+    .object({
+      rating: z.string().optional(),
+      tags: z.string().optional(),
+      title: z.string().optional(),
+      isViewed: z.boolean().optional(),
+      isFavorited: z.boolean().optional(),
+      fileUrl: z.string().optional(),
+      previewUrl: z.string().optional(),
+      sampleUrl: z.string().optional(),
+    })
+    .partial(),
+});
+
+// Reusable schema for simple ID operations
+const PostIdSchema = z.number().int().positive();
+
+const CountSchema = z.object({
+  artistId: z.number().optional(),
+  filters: PostFilterSchema.optional(),
+});
+
+// --- Handlers ---
+
+export const registerPostHandlers = (service: PostsService) => {
+  // 1. GET POSTS
+  ipcMain.handle(IPC_CHANNELS.DB.GET_POSTS, async (_, payload: unknown) => {
+    const validation = GetPostsSchema.safeParse(payload);
+    if (!validation.success) {
+      logger.error(`Validation Error [GET_POSTS]: ${validation.error.message}`);
+      throw new Error(`Validation Error: ${validation.error.message}`);
+    }
+
+    const { artistId, page, limit, filters } = validation.data;
+    const offset = (page - 1) * limit;
+
+    try {
+      return await service.getPosts({
+        artistId,
+        limit,
+        offset,
+        filters,
+      });
+    } catch (error) {
+      logger.error(`IPC: [db:get-posts] error:`, error);
+      throw new Error("Failed to fetch posts.");
+    }
+  });
+
+  // 2. GET COUNT
+  ipcMain.handle(
+    IPC_CHANNELS.DB.GET_POSTS_COUNT,
+    async (_, payload: unknown) => {
+      // Пытаемся распарсить как объект фильтров
+      const complexValidation = CountSchema.safeParse(payload);
+
+      // Пытаемся распарсить как просто число (легаси вызовы)
+      const numberValidation = PostIdSchema.safeParse(payload);
+
+      let params: {
+        artistId?: number;
+        filters?: z.infer<typeof PostFilterSchema>;
+      } = {};
+
+      if (complexValidation.success) {
+        params = complexValidation.data;
+      } else if (numberValidation.success) {
+        params = { artistId: numberValidation.data };
+      }
+
+      try {
+        return await service.getPostsCount(params);
+      } catch (err) {
+        logger.error("Failed to get posts count:", err);
+        return 0;
+      }
+    }
+  );
+
+  // 3. UPDATE POST
+  ipcMain.handle(IPC_CHANNELS.DB.UPDATE_POST, async (_, payload: unknown) => {
+    const validation = UpdatePostSchema.safeParse(payload);
+    if (!validation.success) {
+      logger.warn(
+        `[IPC] UPDATE_POST validation failed: ${validation.error.message}`
+      );
+      return false;
+    }
+
+    try {
+      const { postId, changes } = validation.data;
+      return await service.updatePost(postId, changes);
+    } catch (error) {
+      logger.error(`[IPC] Failed to update post`, error);
+      return false;
+    }
+  });
+
+  // 4. TOGGLE FAVORITE
+  ipcMain.handle(
+    IPC_CHANNELS.DB.TOGGLE_FAVORITE,
+    async (_, payload: unknown) => {
+      const validation = PostIdSchema.safeParse(payload);
+
+      if (!validation.success) {
+        logger.warn(
+          `[IPC] TOGGLE_FAVORITE invalid ID: ${JSON.stringify(payload)}`
+        );
+        return false;
+      }
+
+      try {
+        // TypeScript теперь проверит наличие метода в интерфейсе PostsService
+        return await service.toggleFavorite(validation.data);
+      } catch (error) {
+        logger.error(
+          `[IPC] Failed to toggle favorite for post ${validation.data}`,
+          error
+        );
+        return false;
+      }
+    }
+  );
+
+  // 5. MARK VIEWED
+  ipcMain.handle(IPC_CHANNELS.DB.MARK_VIEWED, async (_, payload: unknown) => {
+    const validation = PostIdSchema.safeParse(payload);
+
+    if (!validation.success) {
+      return false;
+    }
+
+    try {
+      // Используем штатный метод updatePost, который гарантированно существует
+      return await service.updatePost(validation.data, { isViewed: true });
+    } catch (error) {
+      logger.error(
+        `[IPC] Failed to mark post as viewed ${validation.data}`,
+        error
+      );
+      return false;
+    }
+  });
+
+  // // 6. RESET CACHE
+  // ipcMain.handle(
+  //   IPC_CHANNELS.DB.RESET_POST_CACHE,
+  //   async (_, payload: unknown) => {
+  //     const validation = PostIdSchema.safeParse(payload);
+  //     if (validation.success) {
+  //       logger.info(`[IPC] Reset cache requested for post ${validation.data}`);
+  //     }
+  //     return true;
+  //   }
+  // );
+
+  ipcMain.handle(
+    IPC_CHANNELS.DB.RESET_POST_CACHE,
+    async (_, artistId: number) => {
+      try {
+        return await service.resetArtistCache(artistId);
+      } catch (error) {
+        logger.error("IPC: Failed to reset post cache", error);
+        return false;
+      }
+    }
+  );
+};
 </file>
 
 <file path="docs/roadmap.md">
@@ -9572,20 +9710,82 @@ Advanced features for future releases:
 - Performance optimization is important for large datasets (6000+ posts)
 </file>
 
-<file path="drizzle/meta/_journal.json">
-{
-  "version": "5",
-  "dialect": "sqlite",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "5",
-      "when": 1766130825943,
-      "tag": "0000_tearful_jimmy_woo",
-      "breakpoints": true
-    }
-  ]
-}
+<file path="src/main/db/schema.ts">
+import {
+  sqliteTable,
+  text,
+  integer,
+  unique,
+  index,
+} from "drizzle-orm/sqlite-core";
+
+export const artists = sqliteTable("artists", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  tag: text("tag").notNull().unique(),
+  type: text("type", { enum: ["tag", "uploader", "query"] }).notNull(),
+  apiEndpoint: text("api_endpoint").notNull(),
+  lastPostId: integer("last_post_id").notNull().default(0),
+  newPostsCount: integer("new_posts_count").notNull().default(0),
+  lastChecked: integer("last_checked", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+export const posts = sqliteTable(
+  "posts",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    postId: integer("post_id").notNull(),
+    artistId: integer("artist_id")
+      .notNull()
+      .references(() => artists.id, { onDelete: "cascade" }),
+    fileUrl: text("file_url").notNull(),
+    previewUrl: text("preview_url").notNull(),
+    sampleUrl: text("sample_url").notNull().default(""),
+    title: text("title").default(""),
+    rating: text("rating").default(""),
+    tags: text("tags").notNull(),
+    publishedAt: integer("published_at", { mode: "timestamp" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    isViewed: integer("is_viewed", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    isFavorited: integer("is_favorited", { mode: "boolean" }) // Добавили поле
+      .notNull()
+      .default(false),
+  },
+  (t) => ({
+    uniquePost: unique().on(t.artistId, t.postId),
+    artistIdIdx: index("artistIdIdx").on(t.artistId),
+    isViewedIdx: index("isViewedIdx").on(t.isViewed),
+    publishedAtIdx: index("publishedAtIdx").on(t.publishedAt),
+    isFavoritedIdx: index("isFavoritedIdx").on(t.isFavorited),
+  })
+);
+
+export const settings = sqliteTable("settings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id").default(""),
+  encryptedApiKey: text("encrypted_api_key").default(""),
+  isSafeMode: integer("is_safe_mode", { mode: "boolean" }).default(true),
+  isAdultConfirmed: integer("is_adult_confirmed", { mode: "boolean" }).default(
+    false
+  ),
+});
+
+// Types
+export type Artist = typeof artists.$inferSelect;
+export type NewArtist = typeof artists.$inferInsert;
+export type Post = typeof posts.$inferSelect & {
+  isFavorited: boolean;
+};
+export type NewPost = typeof posts.$inferInsert;
+export type Settings = typeof settings.$inferSelect;
+export type NewSettings = typeof settings.$inferInsert;
 </file>
 
 <file path="docs/architecture.md">
@@ -10847,7 +11047,7 @@ export const registerAllHandlers = (
   registerSyncAndMaintenanceHandlers(syncService, mainWindow);
 
   // 5. Register Files (Downloads)
-  registerFileHandlers(postsService);
+  registerFileHandlers();
 
   logger.info("IPC: All modular handlers registered.");
 };
@@ -10960,7 +11160,7 @@ declare global {
 </file>
 
 <file path="src/renderer/components/viewer/ViewerDialog.tsx">
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useCallback, useState, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10976,10 +11176,13 @@ import {
   MoreHorizontal,
   ChevronLeft,
   ChevronRight,
+  Folder,
   Copy,
+  RefreshCw,
   Bug,
+  Tags,
   ExternalLink,
-  Info,
+  Calendar,
 } from "lucide-react";
 
 import {
@@ -10989,6 +11192,10 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuLabel,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
+  DropdownMenuSubContent,
 } from "../ui/dropdown-menu";
 
 import { useQueryClient, InfiniteData } from "@tanstack/react-query";
@@ -11008,81 +11215,216 @@ const useCurrentPost = (
 
     let queryKey: unknown[] = [];
 
+    // 🔥 FIX: TypeScript ругался на несовместимые типы.
+    // Если origin.kind === 'artist', берем ключ артиста.
     if (origin.kind === "artist") {
       queryKey = ["posts", origin.artistId];
-    } else if (origin.kind === "browse") {
-      queryKey = ["posts", "browse", { tags: origin.filters || "" }];
-    } else {
+    }
+    // Если у тебя в ViewerOrigin появятся типы 'search' или 'browse', добавь их сюда явно.
+    // Пока что фоллбек на дефолтный поиск в кэше, если тип не совпал.
+    else {
+      // Пытаемся найти пост в любых закэшированных списках постов
+      const queries = queryClient.getQueriesData<InfiniteData<Post[]>>({
+        queryKey: ["posts"],
+      });
+      for (const [_, qData] of queries) {
+        if (!qData) continue;
+        for (const page of qData.pages) {
+          const post = page.find((p) => p.id === currentPostId);
+          if (post) return post;
+        }
+      }
+      // Если это browse или favorites, можно добавить специфичные ключи:
+      // if (origin.kind === 'favorites') queryKey = ['favorites'];
       return null;
     }
 
     const data = queryClient.getQueryData<InfiniteData<Post[]>>(queryKey);
-
     if (!data) return null;
 
     for (const page of data.pages) {
-      const found = page.find((p) => p.id === currentPostId);
-      if (found) return found;
+      const post = page.find((p) => p.id === currentPostId);
+      if (post) return post;
     }
     return null;
   }, [currentPostId, origin, queryClient]);
 };
 
-interface ViewerDialogPostScopeProps {
-  post: Post;
-  queueIds: number[];
-  close: () => void;
-  next: () => void;
-  prev: () => void;
-  controlsVisible: boolean;
-  setControlsVisible: (v: boolean) => void;
-  toggleTags: () => void;
-}
+// --- Под-компонент для Медиа ---
+const ViewerMedia = ({ post }: { post: Post }) => {
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(true);
 
-const ViewerDialogPostScope: React.FC<ViewerDialogPostScopeProps> = ({
+  const isVideo =
+    post.fileUrl.endsWith(".mp4") || post.fileUrl.endsWith(".webm");
+
+  useEffect(() => {
+    const handleMediaKeys = (e: KeyboardEvent) => {
+      if (e.key === " ") {
+        if (document.activeElement?.tagName === "VIDEO") {
+          return;
+        }
+        e.preventDefault();
+        setIsVideoPlaying((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", handleMediaKeys);
+    return () => window.removeEventListener("keydown", handleMediaKeys);
+  }, []);
+
+  const handleContainerClick = (e: React.MouseEvent) => {
+    if (isVideo) {
+      if (e.target instanceof HTMLVideoElement) return;
+      setIsVideoPlaying((v) => !v);
+      return;
+    }
+    setIsZoomed(!isZoomed);
+  };
+
+  return (
+    <div
+      className="flex relative justify-center items-center pb-20 w-full h-full cursor-default"
+      onClick={handleContainerClick}
+    >
+      {isVideo ? (
+        <video
+          src={post.fileUrl}
+          className="object-contain max-w-full max-h-full outline-none focus:outline-none"
+          autoPlay={isVideoPlaying}
+          loop
+          controls
+          onPlay={() => setIsVideoPlaying(true)}
+          onPause={() => setIsVideoPlaying(false)}
+          ref={(el) => {
+            if (el) {
+              if (isVideoPlaying && el.paused) el.play().catch(() => {});
+              else if (!isVideoPlaying && !el.paused) el.pause();
+            }
+          }}
+        />
+      ) : (
+        <img
+          src={isZoomed ? post.fileUrl : post.sampleUrl || post.fileUrl}
+          alt={`Post ${post.id}`}
+          className={cn(
+            "transition-all duration-300 ease-out",
+            isZoomed
+              ? "max-w-none max-h-none cursor-zoom-out"
+              : "object-contain max-w-full max-h-full cursor-zoom-in"
+          )}
+        />
+      )}
+    </div>
+  );
+};
+
+// --- Container Scope ---
+
+const ViewerDialogPostScope = ({
   post,
-  queueIds,
+  queue: _queue,
   close,
   next,
   prev,
   controlsVisible,
-  setControlsVisible,
-  toggleTags,
+}: {
+  post: Post;
+  queue: {
+    ids: number[];
+    origin: ViewerOrigin | undefined;
+    totalGlobalCount?: number;
+  } | null;
+  close: () => void;
+  next: () => void;
+  prev: () => void;
+  controlsVisible: boolean;
 }) => {
   const queryClient = useQueryClient();
-  const [isFavorited, setIsFavorited] = useState(post.isFavorited);
 
-  // Автоматическая пометка "Просмотрено"
+  // --- LOCAL STATE ---
+  const [isFavorited, setIsFavorited] = useState(post.isFavorited);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+
+  const isDeveloperMode = true;
+
+  const formattedDate = useMemo(() => {
+    const timestamp = post.publishedAt || post.createdAt;
+    if (!timestamp) return "Unknown date";
+
+    const isSeconds = Number(timestamp) < 100000000000;
+    const dateVal = new Date(Number(timestamp) * (isSeconds ? 1000 : 1));
+
+    return dateVal.toLocaleDateString("ru-RU", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  }, [post.publishedAt, post.createdAt]);
+
+  // --- MARK VIEWED ---
   useEffect(() => {
     if (post.isViewed) return;
+    window.api.markPostAsViewed(post.id);
 
-    const updateCache = (queryKey: unknown[]) => {
-      queryClient.setQueryData<InfiniteData<Post[]>>(queryKey, (oldData) => {
-        if (!oldData) return oldData;
-        return {
-          ...oldData,
-          pages: oldData.pages.map((page) =>
-            page.map((p) => (p.id === post.id ? { ...p, isViewed: true } : p))
-          ),
-        };
-      });
+    // Optimistic Update
+    const queryKey =
+      _queue?.origin?.kind === "artist"
+        ? ["posts", _queue.origin.artistId]
+        : ["posts"];
+
+    queryClient.setQueryData<InfiniteData<Post[]>>(queryKey, (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        pages: old.pages.map((page) =>
+          page.map((p) => (p.id === post.id ? { ...p, isViewed: true } : p))
+        ),
+      };
+    });
+  }, [post.id, post.isViewed, _queue, queryClient]);
+
+  // --- DOWNLOAD LISTENER ---
+  useEffect(() => {
+    const filenameId = `${post.artistId}_${post.postId}.${
+      post.fileUrl.split(".").pop() || "jpg"
+    }`;
+
+    const unsubscribe = window.api.onDownloadProgress((data) => {
+      if (data.id !== filenameId) return;
+
+      if (data.percent > 0 && data.percent < 100) {
+        setIsDownloading(true);
+        setDownloadProgress(data.percent);
+      } else {
+        setIsDownloading(false);
+        setDownloadProgress(0);
+      }
+    });
+
+    return () => {
+      unsubscribe();
     };
+  }, [post.artistId, post.postId, post.fileUrl]);
 
-    updateCache(["posts", post.artistId]);
-
-    window.api.updatePost(post.id, { isViewed: true });
-  }, [post.id, post.isViewed, post.artistId, queryClient]);
+  // --- HANDLERS ---
 
   const toggleFavorite = async () => {
     const previousState = isFavorited;
-    const newState = !isFavorited;
-
-    setIsFavorited(newState);
+    // Optimistic UI update
+    setIsFavorited(!previousState);
 
     try {
-      await window.api.updatePost(post.id, { isFavorited: newState });
+      // 🛑 ВАЖНО: Убедись, что db:toggle-post-favorite зарегистрирован в main.ts!
+      const newState = await window.api.togglePostFavorite(post.id);
+      setIsFavorited(newState);
 
-      const queryKey = ["posts", post.artistId];
+      // Cache Update
+      const queryKey =
+        _queue?.origin?.kind === "artist"
+          ? ["posts", _queue.origin.artistId]
+          : ["posts"];
+
       queryClient.setQueryData<InfiniteData<Post[]>>(queryKey, (old) => {
         if (!old) return old;
         return {
@@ -11095,226 +11437,402 @@ const ViewerDialogPostScope: React.FC<ViewerDialogPostScopeProps> = ({
         };
       });
     } catch (error) {
+      // Revert on error
       setIsFavorited(previousState);
       console.error("Failed to toggle favorite:", error);
+      alert(
+        "Не удалось лайкнуть. Проверь логи (возможно не работает API/Backend)."
+      );
     }
   };
 
-  const isVideo =
-    post.fileUrl.endsWith(".mp4") || post.fileUrl.endsWith(".webm");
+  const downloadImage = async () => {
+    if (isDownloading) return;
+    setDownloadProgress(1);
 
-  const isFirst = queueIds.indexOf(post.id) === 0;
-  const isLast = queueIds.indexOf(post.id) === queueIds.length - 1;
-  const ratingLabel = post.rating ? post.rating.toUpperCase() : "UNKNOWN";
+    try {
+      const ext = post.fileUrl.split(".").pop() || "jpg";
+      const filename = `${post.artistId}_${post.postId}.${ext}`;
+      await window.api.downloadFile(post.fileUrl, filename);
+    } catch (error) {
+      console.error("Download error", error);
+      setDownloadProgress(0);
+    }
+  };
+
+  const openFolder = async () => {
+    const ext = post.fileUrl.split(".").pop() || "jpg";
+    const filename = `${post.artistId}_${post.postId}.${ext}`;
+    await window.api.openFileInFolder(filename);
+  };
+
+  const tagsToQuery = (t: string | null | undefined) => {
+    if (!t) return "";
+    return t.trim().split(/\s+/g).filter(Boolean).join("+");
+  };
+
+  const handleCopyText = async (text: string) => {
+    try {
+      await window.api.writeToClipboard(text);
+    } catch (err) {
+      console.error("Failed to copy text via IPC: ", err);
+    }
+  };
+
+  const handleOpenExternal = (url: string) => {
+    if (url) window.api.openExternal(url);
+  };
+
+  const resetLocalCache = () => {
+    if (!post) return;
+    window.api.resetPostCache(post.id);
+  };
+
+  const handleCopyDebugInfo = async () => {
+    const debugInfo = {
+      appVersion: "1.4.1",
+      post: post,
+      queueLength: _queue?.ids.length,
+      origin: _queue?.origin,
+    };
+    await handleCopyText(JSON.stringify(debugInfo, null, 2));
+  };
+
+  const isCurrentlyDownloading =
+    isDownloading && downloadProgress > 0 && downloadProgress < 100;
+
+  const postPageUrl = `https://rule34.xxx/index.php?page=post&s=view&id=${post.postId}`;
+  const tagQuery = tagsToQuery(post.tags);
 
   return (
     <>
-      <div
-        className="flex overflow-hidden relative justify-center items-center w-full h-full"
-        onClick={() => setControlsVisible(!controlsVisible)}
-      >
-        {isVideo ? (
-          <video
-            src={post.fileUrl}
-            controls
-            autoPlay
-            loop
-            className="object-contain max-w-full max-h-full shadow-2xl"
-          />
-        ) : (
-          <img
-            src={post.fileUrl}
-            alt={`Post ${post.id}`}
-            className="object-contain max-w-full max-h-full shadow-2xl transition-opacity duration-200"
-            loading="eager"
-          />
-        )}
-      </div>
+      <ViewerMedia post={post} />
 
+      {/* --- TOP BAR --- */}
       <div
         className={cn(
-          "absolute inset-0 transition-opacity duration-300 pointer-events-none",
-          controlsVisible ? "opacity-100" : "opacity-0"
+          "fixed top-0 left-0 right-0 h-16 z-50 flex items-center justify-between px-4 bg-gradient-to-b from-black/80 to-transparent transition-transform duration-300",
+          !controlsVisible && "-translate-y-full"
         )}
       >
-        {/* Top Bar */}
-        <div className="flex absolute top-0 right-0 left-0 justify-between p-4 bg-gradient-to-b to-transparent pointer-events-auto from-black/80">
-          <div className="text-white">
-            <h2 className="text-lg font-bold">Post #{post.id}</h2>
-            <div className="flex gap-2 text-xs opacity-70">
-              <span>{ratingLabel}</span>
-              <span>•</span>
-              <span>{new Date(post.publishedAt).toLocaleDateString()}</span>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
+        <div className="flex gap-4 items-center">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={close}
+            className="text-white rounded-full hover:bg-white/10"
+          >
+            <X className="w-6 h-6" />
+          </Button>
+        </div>
+
+        <div className="flex gap-2 items-center">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={toggleFavorite}
+            className="text-white rounded-full hover:bg-white/10"
+            title="Toggle Favorite"
+          >
+            <Heart
               className={cn(
-                "text-white hover:bg-white/20",
-                isFavorited && "text-red-500 hover:text-red-400"
+                "w-5 h-5 transition-colors",
+                isFavorited ? "text-red-500 fill-red-500" : "text-white"
               )}
-              onClick={toggleFavorite}
-            >
-              <Heart className={cn("w-6 h-6", isFavorited && "fill-current")} />
-            </Button>
+            />
+          </Button>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/20"
-              onClick={toggleTags}
-            >
-              <Info className="w-6 h-6" />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-white hover:bg-white/20"
-              onClick={close}
-            >
-              <X className="w-6 h-6" />
-            </Button>
-          </div>
-        </div>
-
-        {/* Navigation Arrows */}
-        <div className="flex absolute inset-y-0 left-0 items-center px-4 pointer-events-auto">
+          {/* DOWNLOAD */}
           <Button
             variant="ghost"
             size="icon"
-            className="w-12 h-12 text-white rounded-full backdrop-blur-sm bg-black/20 hover:bg-black/40"
-            onClick={(e) => {
-              e.stopPropagation();
-              prev();
-            }}
-            disabled={isFirst}
+            onClick={downloadImage}
+            disabled={isCurrentlyDownloading}
+            className="overflow-hidden relative text-white rounded-full hover:bg-white/10 group"
           >
-            <ChevronLeft className="w-8 h-8" />
-          </Button>
-        </div>
-        <div className="flex absolute inset-y-0 right-0 items-center px-4 pointer-events-auto">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="w-12 h-12 text-white rounded-full backdrop-blur-sm bg-black/20 hover:bg-black/40"
-            onClick={(e) => {
-              e.stopPropagation();
-              next();
-            }}
-            disabled={isLast}
-          >
-            <ChevronRight className="w-8 h-8" />
-          </Button>
-        </div>
-
-        {/* Bottom Bar */}
-        <div className="flex absolute right-0 bottom-0 left-0 gap-3 justify-center p-6 bg-gradient-to-t to-transparent pointer-events-auto from-black/90 via-black/50">
-          <Button
-            variant="secondary"
-            size="icon"
-            className="text-white backdrop-blur-md bg-white/10 border-white/10 hover:bg-white/20"
-            onClick={() => window.api.openExternal(post.fileUrl)}
-            title="Open in Browser"
-          >
-            <ExternalLink className="w-4 h-4" />
+            {isCurrentlyDownloading && (
+              <div
+                className="absolute inset-0 transition-all duration-100 bg-green-500/50"
+                style={{ width: `${downloadProgress}%` }}
+              />
+            )}
+            {isCurrentlyDownloading ? (
+              <div className="flex relative z-10 items-center text-xs text-white/90">
+                {downloadProgress}%
+              </div>
+            ) : (
+              <Download className="relative z-10 w-5 h-5" />
+            )}
           </Button>
 
-          <Button
-            variant="secondary"
-            className="gap-2 text-white backdrop-blur-md bg-white/10 border-white/10 hover:bg-white/20"
-            onClick={(e) => {
-              e.stopPropagation();
-              window.api.downloadFile(post.fileUrl, `${post.id}.png`);
-            }}
-          >
-            <Download className="w-4 h-4" />
-            Download
-          </Button>
-
+          {/* MENU */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant="secondary"
+                variant="ghost"
                 size="icon"
-                className="text-white backdrop-blur-md bg-white/10 border-white/10 hover:bg-white/20"
+                className="text-white rounded-full hover:bg-white/10"
               >
-                <MoreHorizontal className="w-4 h-4" />
+                <MoreHorizontal className="w-5 h-5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
+              className="w-56 text-white shadow-lg bg-neutral-900 border-white/10"
+              sideOffset={8}
               align="end"
-              className="w-56 bg-slate-900 border-slate-800 text-slate-200"
             >
-              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => window.api.writeToClipboard(post.fileUrl)}
-              >
-                <Copy className="mr-2 w-4 h-4" /> Copy URL
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <Copy className="mr-2 w-4 h-4" />
+                  Copy...
+                </DropdownMenuSubTrigger>
+                <DropdownMenuPortal>
+                  <DropdownMenuSubContent className="w-48 text-white shadow-xl bg-neutral-900 border-white/10">
+                    <DropdownMenuItem
+                      onClick={() => handleCopyText(String(post.postId))}
+                    >
+                      Copy post ID
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleCopyText(postPageUrl)}
+                    >
+                      Copy post link
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      disabled={!post.tags}
+                      onClick={() => handleCopyText(post.tags || "")}
+                    >
+                      Copy tags (all)
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => handleCopyText(post.fileUrl)}
+                    >
+                      Copy file URL
+                    </DropdownMenuItem>
+                  </DropdownMenuSubContent>
+                </DropdownMenuPortal>
+              </DropdownMenuSub>
+
+              <DropdownMenuSeparator />
+              <DropdownMenuLabel>Open</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => handleOpenExternal(postPageUrl)}>
+                <ExternalLink className="mr-2 w-4 h-4" />
+                Open post page
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-slate-800" />
-              <DropdownMenuLabel>Debug</DropdownMenuLabel>
-              <DropdownMenuItem
-                onClick={() => window.api.resetPostCache(post.id)}
-              >
-                <Bug className="mr-2 w-4 h-4" /> Reset Local State
+              <DropdownMenuItem onClick={openFolder}>
+                <Folder className="mr-2 w-4 h-4" />
+                Reveal in folder
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+
+              {isDeveloperMode && (
+                <>
+                  <DropdownMenuLabel>Developer</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={resetLocalCache}>
+                    <RefreshCw className="mr-2 w-4 h-4" />
+                    Reset cache
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleCopyDebugInfo}>
+                    <Bug className="mr-2 w-4 h-4" />
+                    Copy debug info
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
+
+      {/* --- BOTTOM BAR --- */}
+      <div
+        className={cn(
+          "fixed bottom-0 left-0 right-0 h-20 z-50 flex items-center justify-between px-6 bg-gradient-to-t from-black/90 via-black/50 to-transparent transition-transform duration-300",
+          !controlsVisible && "translate-y-full"
+        )}
+      >
+        <div className="flex flex-col gap-1">
+          <div className="flex gap-2 items-center">
+            <span
+              className={cn(
+                "px-2 py-0.5 rounded text-xs font-bold uppercase",
+                post.rating === "e"
+                  ? "bg-red-500/20 text-red-400"
+                  : "bg-green-500/20 text-green-400"
+              )}
+            >
+              {post.rating === "s"
+                ? "Safe"
+                : post.rating === "q"
+                ? "Questionable"
+                : "Explicit"}
+            </span>
+            {/* DATE DISPLAY */}
+            <span className="flex gap-1 items-center text-xs text-white/60">
+              <Calendar className="w-3 h-3" />
+              {formattedDate}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex gap-3 items-center">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 text-white bg-white/5 border-white/10 hover:bg-white/10"
+            // 🔥 FIX: Используем tagQuery
+            onClick={() => handleCopyText(tagQuery)}
+          >
+            <Tags className="w-4 h-4" />
+            Tags
+          </Button>
+        </div>
+      </div>
+
+      {/* --- NAV ARROWS --- */}
+      <button
+        className={cn(
+          "absolute left-2 top-1/2 -translate-y-1/2 p-4 text-white/50 hover:text-white transition-colors outline-none",
+          !controlsVisible && "opacity-0"
+        )}
+        onClick={(e) => {
+          e.stopPropagation();
+          prev();
+        }}
+      >
+        <ChevronLeft className="w-10 h-10 drop-shadow-md" />
+      </button>
+
+      <button
+        className={cn(
+          "absolute right-2 top-1/2 -translate-y-1/2 p-4 text-white/50 hover:text-white transition-colors outline-none",
+          !controlsVisible && "opacity-0"
+        )}
+        onClick={(e) => {
+          e.stopPropagation();
+          next();
+        }}
+      >
+        <ChevronRight className="w-10 h-10 drop-shadow-md" />
+      </button>
     </>
   );
 };
 
+// --- Основной Компонент (Обертка) ---
+
 export const ViewerDialog = () => {
-  const { isOpen, currentIndex, close, next, prev, queue, toggleTagsDrawer } =
-    useViewerStore();
+  const {
+    isOpen,
+    close,
+    currentPostId,
+    queue,
+    currentIndex,
+    next,
+    prev,
+    controlsVisible,
+    setControlsVisible,
+    appendQueueIds,
+  } = useViewerStore();
 
-  const [controlsVisible, setControlsVisible] = useState(true);
+  const post = useCurrentPost(currentPostId, queue?.origin);
+  const queryClient = useQueryClient();
 
-  const origin = queue?.origin;
-  const queueIds = queue?.ids || [];
+  // Infinite loading logic
+  useEffect(() => {
+    if (!isOpen || !queue || !queue.origin) return;
 
-  const currentPostId =
-    queueIds.length > 0 && currentIndex >= 0 && currentIndex < queueIds.length
-      ? queueIds[currentIndex]
-      : null;
+    const loadedCount = queue.ids.length;
+    const threshold = 5;
+    const isNearEnd = currentIndex >= loadedCount - threshold;
+    const hasReachedLimit =
+      (queue.totalGlobalCount && loadedCount >= queue.totalGlobalCount) ||
+      !queue.hasNextPage;
 
-  const post = useCurrentPost(currentPostId, origin);
+    if (isNearEnd && !hasReachedLimit && queue.onLoadMore) {
+      queue.onLoadMore();
+    }
+  }, [isOpen, queue, currentIndex]);
+
+  // Sync new posts
+  useEffect(() => {
+    if (!isOpen || !queue || !queue.origin || !queue.onLoadMore) return;
+
+    // 🔥 FIX: Безопасное определение ключа
+    let queryKey: unknown[] = [];
+    if (queue.origin.kind === "artist") {
+      queryKey = ["posts", queue.origin.artistId];
+    } else {
+      // Fallback or specific logic for other types
+      // Если у тебя browse/search используют ключ 'posts-search' или просто 'posts'
+      return;
+    }
+
+    const infiniteData =
+      queryClient.getQueryData<InfiniteData<Post[]>>(queryKey);
+
+    if (infiniteData) {
+      const allLoadedPosts = infiniteData.pages.flatMap((page) => page);
+      const loadedPostIds = new Set(queue.ids);
+      const newPosts = allLoadedPosts.filter((p) => !loadedPostIds.has(p.id));
+
+      if (newPosts.length > 0) {
+        appendQueueIds(newPosts.map((p) => p.id));
+      }
+    }
+  }, [isOpen, queue, queryClient, appendQueueIds]);
+
+  // Keyboard Nav
+  const handleNavigationKeys = useCallback(
+    (e: KeyboardEvent) => {
+      if (!isOpen) return;
+      switch (e.key) {
+        case "ArrowRight":
+          e.preventDefault();
+          next();
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          prev();
+          break;
+        case "Escape":
+          e.preventDefault();
+          close();
+          break;
+      }
+    },
+    [isOpen, next, prev, close]
+  );
 
   useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") next();
-      if (e.key === "ArrowLeft") prev();
-      if (e.key === "Escape") close();
-      if (e.code === "Space") setControlsVisible((v) => !v);
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, next, prev, close]);
+    window.addEventListener("keydown", handleNavigationKeys);
+    return () => window.removeEventListener("keydown", handleNavigationKeys);
+  }, [handleNavigationKeys]);
 
+  // Mouse Controls Visibility
   useEffect(() => {
     let timeout: NodeJS.Timeout;
     const handleMouseMove = () => {
       setControlsVisible(true);
       clearTimeout(timeout);
-      timeout = setTimeout(() => setControlsVisible(false), 3000);
+      timeout = setTimeout(() => {
+        setControlsVisible(false);
+      }, 2000);
     };
+
     if (isOpen) {
       window.addEventListener("mousemove", handleMouseMove);
-      timeout = setTimeout(() => setControlsVisible(false), 3000);
+      setControlsVisible(true);
+      timeout = setTimeout(() => setControlsVisible(false), 2000);
     }
+
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       clearTimeout(timeout);
     };
-  }, [isOpen]);
+  }, [isOpen, setControlsVisible]);
 
-  if (!isOpen || !post) return null;
+  if (!post) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && close()}>
@@ -11340,180 +11858,17 @@ export const ViewerDialog = () => {
           <ViewerDialogPostScope
             key={post.id}
             post={post}
-            queueIds={queueIds}
+            queue={queue}
             close={close}
             next={next}
             prev={prev}
             controlsVisible={controlsVisible}
-            setControlsVisible={setControlsVisible}
-            toggleTags={toggleTagsDrawer}
           />
         </div>
       </DialogContent>
     </Dialog>
   );
 };
-</file>
-
-<file path="src/main/db/schema.ts">
-import {
-  sqliteTable,
-  text,
-  integer,
-  unique,
-  index,
-} from "drizzle-orm/sqlite-core";
-
-export const artists = sqliteTable("artists", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  name: text("name").notNull(),
-  tag: text("tag").notNull().unique(),
-  type: text("type", { enum: ["tag", "uploader", "query"] }).notNull(),
-  apiEndpoint: text("api_endpoint").notNull(),
-  lastPostId: integer("last_post_id").notNull().default(0),
-  newPostsCount: integer("new_posts_count").notNull().default(0),
-  lastChecked: integer("last_checked", { mode: "timestamp" }),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .$defaultFn(() => new Date()),
-});
-
-export const posts = sqliteTable(
-  "posts",
-  {
-    id: integer("id").primaryKey({ autoIncrement: true }),
-    postId: integer("post_id").notNull(),
-    artistId: integer("artist_id")
-      .notNull()
-      .references(() => artists.id, { onDelete: "cascade" }),
-    fileUrl: text("file_url").notNull(),
-    previewUrl: text("preview_url").notNull(),
-    sampleUrl: text("sample_url").notNull().default(""),
-    title: text("title").default(""),
-    rating: text("rating").default(""),
-    tags: text("tags").notNull(),
-    publishedAt: integer("published_at", { mode: "timestamp" }).notNull(),
-    createdAt: integer("created_at", { mode: "timestamp" })
-      .notNull()
-      .$defaultFn(() => new Date()),
-    isViewed: integer("is_viewed", { mode: "boolean" })
-      .notNull()
-      .default(false),
-    isFavorited: integer("is_favorited", { mode: "boolean" }) // Добавили поле
-      .notNull()
-      .default(false),
-  },
-  (t) => ({
-    uniquePost: unique().on(t.artistId, t.postId),
-    artistIdIdx: index("artistIdIdx").on(t.artistId),
-    isViewedIdx: index("isViewedIdx").on(t.isViewed),
-    publishedAtIdx: index("publishedAtIdx").on(t.publishedAt),
-    isFavoritedIdx: index("isFavoritedIdx").on(t.isFavorited),
-  })
-);
-
-export const settings = sqliteTable("settings", {
-  id: integer("id").primaryKey({ autoIncrement: true }),
-  userId: text("user_id").default(""),
-  encryptedApiKey: text("encrypted_api_key").default(""),
-  isSafeMode: integer("is_safe_mode", { mode: "boolean" }).default(true),
-  isAdultConfirmed: integer("is_adult_confirmed", { mode: "boolean" }).default(
-    false
-  ),
-});
-
-// Types
-export type Artist = typeof artists.$inferSelect;
-export type NewArtist = typeof artists.$inferInsert;
-export type Post = typeof posts.$inferSelect & {
-  isFavorited: boolean;
-};
-export type NewPost = typeof posts.$inferInsert;
-export type Settings = typeof settings.$inferSelect;
-export type NewSettings = typeof settings.$inferInsert;
-</file>
-
-<file path="src/renderer/App.tsx">
-import { HashRouter as Router, Routes, Route } from "react-router-dom";
-import { useEffect, useState } from "react";
-
-// --- ИМПОРТЫ КОМПОНЕНТОВ ---
-import { AppLayout as Layout } from "./components/layout/AppLayout";
-import { Settings } from "./components/pages/Settings";
-import { Onboarding } from "./components/pages/Onboarding";
-import { Tracked } from "./components/pages/Tracked";
-import { ArtistDetails } from "./components/pages/ArtistDetails";
-import { Browse } from "./components/pages/Browse"; // Импорт настоящего компонента
-
-const Updates = () => (
-  <div className="p-8">
-    <h1 className="text-2xl font-bold">Updates</h1>
-    <p>Feed here.</p>
-  </div>
-);
-const Favorites = () => (
-  <div className="p-8">
-    <h1 className="text-2xl font-bold">Favorites</h1>
-    <p>Likes here.</p>
-  </div>
-);
-
-function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const settings = await window.api.getSettings();
-        console.log(
-          `[App] Auth check result: hasApiKey=${settings?.hasApiKey}, userId=${settings?.userId}`
-        );
-        setIsAuthenticated(settings?.hasApiKey ?? false);
-      } catch (error) {
-        console.error("Failed to check authentication:", error);
-        setIsAuthenticated(false);
-      }
-    };
-    checkAuth();
-  }, []);
-
-  // Show loader while checking authentication
-  if (isAuthenticated === null) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="text-muted-foreground">Loading...</div>
-      </div>
-    );
-  }
-
-  // Show onboarding if not authenticated
-  if (isAuthenticated === false) {
-    return <Onboarding onLoginSuccess={() => setIsAuthenticated(true)} />;
-  }
-
-  // Show main app if authenticated
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Tracked />} />
-          <Route path="tracked" element={<Tracked />} />
-          <Route path="artist/:id" element={<ArtistDetails />} />
-          <Route path="browse" element={<Browse />} />
-          <Route path="updates" element={<Updates />} />
-          <Route path="favorites" element={<Favorites />} />
-          <Route path="settings" element={<Settings />} />
-          <Route
-            path="*"
-            element={<div className="p-10">Page Not Found (Check URL)</div>}
-          />
-        </Route>
-      </Routes>
-    </Router>
-  );
-}
-
-export default App;
 </file>
 
 <file path="README.md">
@@ -11971,6 +12326,89 @@ This project adheres to strict development principles:
 See [Contributing Guide](./docs/contributing.md) for detailed guidelines.
 </file>
 
+<file path="src/renderer/App.tsx">
+import { HashRouter as Router, Routes, Route } from "react-router-dom";
+import { useEffect, useState } from "react";
+
+// --- ИМПОРТЫ КОМПОНЕНТОВ ---
+import { AppLayout as Layout } from "./components/layout/AppLayout";
+import { Settings } from "./components/pages/Settings";
+import { Onboarding } from "./components/pages/Onboarding";
+import { Tracked } from "./components/pages/Tracked";
+import { ArtistDetails } from "./components/pages/ArtistDetails";
+import { Browse } from "./components/pages/Browse"; // Импорт настоящего компонента
+
+const Updates = () => (
+  <div className="p-8">
+    <h1 className="text-2xl font-bold">Updates</h1>
+    <p>Feed here.</p>
+  </div>
+);
+const Favorites = () => (
+  <div className="p-8">
+    <h1 className="text-2xl font-bold">Favorites</h1>
+    <p>Likes here.</p>
+  </div>
+);
+
+function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const settings = await window.api.getSettings();
+        console.log(
+          `[App] Auth check result: hasApiKey=${settings?.hasApiKey}, userId=${settings?.userId}`
+        );
+        setIsAuthenticated(settings?.hasApiKey ?? false);
+      } catch (error) {
+        console.error("Failed to check authentication:", error);
+        setIsAuthenticated(false);
+      }
+    };
+    checkAuth();
+  }, []);
+
+  // Show loader while checking authentication
+  if (isAuthenticated === null) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
+
+  // Show onboarding if not authenticated
+  if (isAuthenticated === false) {
+    return <Onboarding onLoginSuccess={() => setIsAuthenticated(true)} />;
+  }
+
+  // Show main app if authenticated
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Tracked />} />
+          <Route path="tracked" element={<Tracked />} />
+          <Route path="artist/:id" element={<ArtistDetails />} />
+          <Route path="browse" element={<Browse />} />
+          <Route path="updates" element={<Updates />} />
+          <Route path="favorites" element={<Favorites />} />
+          <Route path="settings" element={<Settings />} />
+          <Route
+            path="*"
+            element={<div className="p-10">Page Not Found (Check URL)</div>}
+          />
+        </Route>
+      </Routes>
+    </Router>
+  );
+}
+
+export default App;
+</file>
+
 <file path="src/main/services/sync-service.ts">
 import { BrowserWindow, safeStorage } from "electron";
 import { logger } from "../lib/logger";
@@ -12164,16 +12602,16 @@ export class SyncService {
   ) {
     let page = 0;
     let hasMore = true;
-    let newPostsCount = 0;
-    let highestPostId = artist.lastPostId;
+    let totalAddedForArtist = 0;
+    let currentHighestId = artist.lastPostId;
 
     while (hasMore && page < maxPages) {
       try {
         const idFilter =
           artist.lastPostId > 0 ? ` id:>${artist.lastPostId}` : "";
-        const tagsQuery = `${
-          artist.type === "uploader" ? "user:" : ""
-        }${encodeURIComponent(artist.tag)}${idFilter}`;
+        const tagsQuery = `${artist.type === "uploader" ? "user:" : ""}${
+          artist.tag
+        }${idFilter}`;
 
         const params = new URLSearchParams({
           page: "dapi",
@@ -12191,76 +12629,80 @@ export class SyncService {
         }
 
         const { data: postsData } = await axios.get<R34Post[]>(
-          `https://api.rule34.xxx/index.php?${params}`,
+          `https://api.rule34.xxx/index.php?${params.toString()}`,
           { timeout: 15000 }
         );
 
-        if (!Array.isArray(postsData) || postsData.length === 0) {
+        // 🔥 КРИТИЧЕСКИЙ ФИКС: Проверка, что пришел массив
+        if (!postsData || !Array.isArray(postsData) || postsData.length === 0) {
           hasMore = false;
           break;
         }
 
+        // Вычисляем максимальный ID в этой пачке
         const batchMaxId = Math.max(...postsData.map((p) => Number(p.id)));
-        if (batchMaxId > highestPostId) highestPostId = batchMaxId;
+        if (batchMaxId > currentHighestId) currentHighestId = batchMaxId;
 
-        const newPosts = postsData.filter(
+        // Фильтруем только те, которых у нас реально нет
+        const newPostsFromBatch = postsData.filter(
           (p) => Number(p.id) > artist.lastPostId
         );
 
-        if (newPosts.length === 0 && artist.lastPostId > 0) {
-          hasMore = false;
-          break;
-        }
+        if (newPostsFromBatch.length > 0) {
+          const postsToSave: NewPost[] = newPostsFromBatch.map((p) => ({
+            postId: Number(p.id),
+            artistId: artist.id,
+            fileUrl: p.file_url,
+            previewUrl: pickPreviewUrl(p),
+            sampleUrl: p.sample_url || p.file_url,
+            title: "",
+            rating: p.rating,
+            tags: p.tags,
+            publishedAt: new Date(
+              (p.change || Math.floor(Date.now() / 1000)) * 1000
+            ),
+            isViewed: false,
+            isFavorited: false,
+          }));
 
-        // Подготовка данных для вставки
-        const postsToSave: NewPost[] = newPosts.map((p) => ({
-          postId: Number(p.id),
-          artistId: artist.id,
-          fileUrl: p.file_url,
-          previewUrl: pickPreviewUrl(p),
-          sampleUrl: p.sample_url || p.file_url,
-          title: "",
-          rating: p.rating,
-          tags: p.tags,
-          publishedAt: new Date((p.change || 0) * 1000),
-          isViewed: false,
-          isFavorited: false,
-        }));
-
-        if (postsToSave.length > 0) {
           await this.db.transaction(async (tx) => {
             await tx.insert(posts).values(postsToSave).onConflictDoNothing();
 
             await tx
               .update(artists)
               .set({
-                lastPostId: highestPostId,
+                lastPostId: currentHighestId,
                 newPostsCount: sql`${artists.newPostsCount} + ${postsToSave.length}`,
                 lastChecked: new Date(),
               })
               .where(eq(artists.id, artist.id));
           });
+
+          totalAddedForArtist += postsToSave.length;
         }
 
-        newPostsCount += postsToSave.length;
-        if (postsData.length < 100) hasMore = false;
-        else page++;
-
-        await new Promise((r) => setTimeout(r, 500));
+        if (postsData.length < 100) {
+          hasMore = false;
+        } else {
+          page++;
+          await new Promise((r) => setTimeout(r, 500));
+        }
       } catch (e) {
-        logger.error(`Sync error for ${artist.name}`, e);
+        logger.error(`Sync error for ${artist.name}:`, e);
         hasMore = false;
       }
     }
 
-    if (newPostsCount === 0) {
+    if (totalAddedForArtist === 0) {
       await this.db
         .update(artists)
         .set({ lastChecked: new Date() })
         .where(eq(artists.id, artist.id));
     }
 
-    logger.info(`Sync finished for ${artist.name}. Added: ${newPostsCount}`);
+    logger.info(
+      `Sync finished for ${artist.name}. Added: ${totalAddedForArtist}`
+    );
   }
 }
 
@@ -12276,6 +12718,7 @@ export type UpdateStatusData = {
   status: string;
   message?: string;
   version?: string;
+  isPortable?: boolean;
 };
 
 export type UpdateStatusCallback = (data: UpdateStatusData) => void;
@@ -12560,6 +13003,7 @@ migrateUserData();
 
 let mainWindow: BrowserWindow | null = null;
 let DB_PATH: string;
+let areHandlersRegistered = false;
 
 const gotTheLock = app.requestSingleInstanceLock();
 
@@ -12601,6 +13045,14 @@ async function initializeAppAndWindow() {
     updaterService.setWindow(mainWindow);
     syncService.setWindow(mainWindow);
 
+    if (!areHandlersRegistered) {
+      registerAllHandlers(syncService, updaterService, mainWindow);
+      areHandlersRegistered = true;
+      logger.info("IPC: Handlers registered.");
+    } else {
+      logger.info("IPC: Handlers already registered, skipping.");
+    }
+
     if (process.env["ELECTRON_RENDERER_URL"]) {
       mainWindow.loadURL(process.env["ELECTRON_RENDERER_URL"]);
     } else {
@@ -12615,9 +13067,6 @@ async function initializeAppAndWindow() {
       if (mainWindow) {
         mainWindow.show();
         updaterService.checkForUpdates();
-
-        registerAllHandlers(syncService, updaterService, mainWindow);
-
         setTimeout(() => {
           logger.info("Main: App Ready.");
         }, 3000);

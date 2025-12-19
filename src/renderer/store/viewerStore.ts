@@ -1,21 +1,20 @@
 import { create } from "zustand";
 
-// Откуда открыт Viewer (контекст)
 export type ViewerOrigin =
   | { kind: "browse"; filters?: string }
   | { kind: "favorites" }
   | { kind: "updates" }
   | { kind: "artist"; artistId: number };
 
-// Очередь просмотра
 export interface ViewerQueue {
   origin: ViewerOrigin;
   ids: number[];
-  initialIndex: number; // Важное поле: с чего начинать
+  initialIndex: number;
   listKey: string;
-  totalGlobalCount?: number; // Optional: total count from DB (e.g., 183) vs loaded array length
-  hasNextPage?: boolean; // Optional: whether more pages can be loaded
-  onLoadMore?: () => void | Promise<void>; // Optional: callback to load more posts
+  totalGlobalCount?: number;
+  hasNextPage?: boolean;
+  onLoadMore?: () => void | Promise<void>;
+  fetchNextPage?: () => void;
 }
 
 interface ViewerState {
@@ -27,7 +26,7 @@ interface ViewerState {
   currentIndex: number;
   currentPostId: number | null;
 
-  open: (queue: ViewerQueue) => void; // Принимаем ТОЛЬКО объект очереди
+  open: (queue: ViewerQueue) => void;
   close: () => void;
 
   next: () => void;
@@ -36,7 +35,7 @@ interface ViewerState {
   toggleTagsDrawer: () => void;
   setControlsVisible: (visible: boolean) => void;
   updateQueueIds: (ids: number[]) => void;
-  appendQueueIds: (newIds: number[]) => void; // Append new IDs to existing queue
+  appendQueueIds: (newIds: number[]) => void;
 }
 
 export const useViewerStore = create<ViewerState>((set, get) => ({
@@ -47,9 +46,7 @@ export const useViewerStore = create<ViewerState>((set, get) => ({
   currentIndex: 0,
   currentPostId: null,
 
-  // ИСПРАВЛЕННАЯ ЛОГИКА OPEN:
   open: (queue) => {
-    // Берем initialIndex прямо из объекта очереди
     const safeIndex = Math.max(
       0,
       Math.min(queue.initialIndex, queue.ids.length - 1)
@@ -58,8 +55,8 @@ export const useViewerStore = create<ViewerState>((set, get) => ({
     set({
       isOpen: true,
       queue,
-      currentIndex: safeIndex, // Используем правильный индекс
-      currentPostId: queue.ids[safeIndex] || null, // Устанавливаем правильный ID
+      currentIndex: safeIndex,
+      currentPostId: queue.ids[safeIndex] || null,
       controlsVisible: true,
       isTagsDrawerOpen: false,
     });
@@ -75,6 +72,14 @@ export const useViewerStore = create<ViewerState>((set, get) => ({
   next: () => {
     const { queue, currentIndex } = get();
     if (!queue) return;
+
+    if (
+      queue.hasNextPage &&
+      queue.fetchNextPage &&
+      currentIndex >= queue.ids.length - 10
+    ) {
+      queue.fetchNextPage();
+    }
 
     if (currentIndex < queue.ids.length - 1) {
       const newIndex = currentIndex + 1;
@@ -114,7 +119,6 @@ export const useViewerStore = create<ViewerState>((set, get) => ({
   appendQueueIds: (newIds) =>
     set((state) => {
       if (!state.queue) return {};
-      // Append new IDs, avoiding duplicates
       const existingIds = new Set(state.queue.ids);
       const uniqueNewIds = newIds.filter((id) => !existingIds.has(id));
       return {
